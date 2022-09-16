@@ -30,16 +30,16 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
-	    fprintf(stderr,"usage: http_client http://<host>:<port>/<file_path>\n");
-	    exit(1);
-	}
-
-	int sockfd, numbytes;
+	int sockfd, numbytes;  
 	char buf[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
+
+	if (argc != 2) {
+	    fprintf(stderr,"usage: client hostname\n");
+	    exit(1);
+	}
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;

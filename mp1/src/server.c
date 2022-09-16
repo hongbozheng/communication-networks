@@ -18,9 +18,6 @@
 #define PORT "3490"  // the port users will be connecting to
 
 #define BACKLOG 10	 // how many pending connections queue will hold
-#define MAXDATASIZE 1048576 // max number of bytes we can get at once 1MB
-#define MAX_FILE_NAME 512
-
 
 void sigchld_handler(int s)
 {
@@ -37,13 +34,8 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
-    if (argc != 2) {
-        fprintf(stderr, "usage: http_server <port>\n");
-        exit(1);
-    }
-
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information

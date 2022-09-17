@@ -34,8 +34,41 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int main(void)
-{
+
+int read_socket(int socket, char *buf, int buf_size){
+    int recv_len = 0;   // recv char length
+    char c = '\0';      // store char read from socket
+    int i = 0;          // store buf index & length
+
+    // buf_size - 1 because null terminating buffer
+    while ((i < buf_size-1) && (c != '\n')) {
+        recv_len = recv(socket,&c,1,0);         // read 1 char into char c
+        if (recv_len > 0) {
+            if (c == '\r') {                    // if recv char '\r'
+                // Is MSG_PEEK necessary ???
+                // maybe it is
+                // https://pubs.opengroup.org/onlinepubs/007904975/functions/recv.html
+                recv_len = recv(socket,&c,1,MSG_PEEK);
+                if ((recv_len > 0) && (c == '\n')) recv(socket,&c,1,0);
+                else c = '\n';                  // add char '\n' manually
+            }
+            buf[i] = c;                         // store char into buf
+            ++i;
+        } else {
+            c = '\n';
+        }
+    }
+    buf[i] = '\0';
+
+    return i
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr,"[USAGE]: ./http_server <port>\n");
+        exit(1);
+    }
+
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information

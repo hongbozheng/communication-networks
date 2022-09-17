@@ -34,7 +34,6 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-
 int read_socket(int socket, char *buf, int buf_size){
     int recv_len = 0;   // recv char length
     char c = '\0';      // store char read from socket
@@ -60,7 +59,53 @@ int read_socket(int socket, char *buf, int buf_size){
     }
     buf[i] = '\0';
 
-    return i
+    return i;
+}
+
+
+void handle_client(int client) {
+    char http_request[1024];
+    int request_len = read_socket(client, http_request, sizeof http_request);
+    
+    printf("[REQUEST]: %s\n",http_request);
+    
+    // why consume the rest of the header
+
+    char method[32];
+    char uri[256];
+    char version[32];
+}
+
+void file_not_found(int client, const char *filename){
+    char buf[1024];
+
+    sprintf(buf,"HTTP/1.1 404 NOT FOUND !\r\n");
+    send(client,buf,strlen(buf),0);
+    sprintf(buf,"Content-Type: text/html\r\n");
+    send(client,buf,strlen(buf),0);
+    sprintf(buf,"The server could not find the file %s\r\n",filename);
+    send(client,buf,strlen(buf),0);
+}
+
+void file_found(int client, const char *filename){
+    char buf[1024];
+
+    sprintf(buf,"HTTP/1.1 200 OK\r\n");
+    send(client,buf,strlen(buf),0);
+    sprintf(buf,"Context-Type: text\r\n");
+    send(client,buf,strlen(buf),0);
+    sprintf(buf,"%s file found\r\n");
+    send(client,buf,strlen(buf),0);
+}
+
+void send_file(int client, const char *filename){
+    FILE *f, *socket = NULL;
+    
+    f = fopen(filename,"rb");
+    if (f == NULL) {
+        file_not_found(client,filename);
+    }
+    file_found(client,filename); 
 }
 
 int main(int argc, char *argv[]) {

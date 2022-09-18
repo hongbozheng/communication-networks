@@ -81,17 +81,55 @@ int read_socket(int socket, char *buf, int buf_size){
     return i;
 }
 
-void send_file(int client, const char *filename) {
-	FILE *f, *f_out = NULL;
+void file_not_found(int client) {
+	char buf[1024];
 
-	f= fopen(filename, "rb");
-	if (f == NULL) {
-		respond_not_found(client);
+	sprintf(buf, "HTTP/1.1 404 Not Found\r\n");
+	send(client,buf,strlen(buf),0);
+	sprintf(buf,"Content-Type: text/html\r\n");
+	send(client,buf,strlen(buf),0);
+	sprintf(buf,"The server could not complete the request \
+            because the request file is unavailable or nonexsistent.\r\n");
+	send(client,buf,strlen(buf),0);
+	sprintf(buf,"\r\n");
+	send(client, buf, strlen(buf),0);
+}
+
+void file_found(int client, const char *filename) {
+	char buf[1024];
+
+	sprintf(buf,"HTTP/1.1 200 OK\r\n");
+	send(client,buf,strlen(buf),0);
+	sprintf(buf,"Content-Type: text\r\n");
+	send(client,buf,strlen(buf),0);
+	sprintf(buf,"\r\n");
+	send(client,buf,strlen(buf),0);
+}
+
+void unknown_request(int client) {
+	char buf[1024];
+
+	sprintf(buf,"HTTP/1.1 400 Bad Request\r\n");
+	send(client,buf,strlen(buf),0);
+	sprintf(buf,"Content-Type: text/html\r\n");
+	send(client,buf,strlen(buf),0);
+    sprintf(buf,"The server could not complete the request \
+            because the request is unknown.\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf,"\r\n");
+	send(client, buf, strlen(buf), 0);
+}
+
+void send_file(int client, const char *filename) {
+	FILE *f, *f_out = NULL;     // create ptr for read file & output file
+
+	f= fopen(filename, "rb");   // try open read file
+	if (f == NULL) {            // read file does not exist
+		file_not_found(client);
 		return;
 	}
 
-	// send 200 OK header
-	respond_ok(client, filename);
+	file_found(client,filename);   // why is this not printing anything ???
 
 	f_out = fdopen(client, "wb");
 	char buf[4096];
@@ -105,8 +143,49 @@ void send_file(int client, const char *filename) {
 		fwrite(buf,1,read_obj,f_out);
 	} while(!feof(f));
 
-	fclose(f_out);
-	fclose(f);
+	fclose(f_out);  // close output file
+	fclose(f);      // close read file
+}
+
+void handle_client(int client) {
+	// read incoming http request
+	char http_request[1024];
+	int read_obj;
+	read_obj = read_socket(client,http_request,sizeof request_line);
+
+	printf("[REQUEST]: %s\n",http_request);
+
+	// consume the rest of the header, we don't need it
+	char discard[256];
+	discard[0] = 'A'; discard[1] = '\0';
+	while((n > 0) && strcmp(discard, "\n")) {
+		read_socket(client, discard, sizeof(discard));
+	}
+
+	// parse request line from header
+	char method[32];
+	char uri[256];
+	char version[32];
+
+	int rv = process_request(request_line, method, uri, version);
+	if (rv == -1) {
+		unknown_request(client);
+		return;
+	}
+
+	if (strcmp(method, "GET") != 0)	{		// This server only supports GET
+		unknown_request(client);
+		return;
+	}
+
+	printf("Method: %s\n", method);
+	printf("URI: %s\n", uri);
+	printf("Version: %s\n", version);
+
+	char filename[256];			// files are served from the current working directory,
+	strcpy(filename, uri+1);	// so strip off the leading '/' from the URI
+
+	send_file(client, filename);
 }
 
 int main(int argc, char *argv[]) {
@@ -226,55 +305,6 @@ int bind_server(const char *port) {
 }
 
 /**
- * Main handler function to process incoming requests (called by child processes).
- * Read the request from the client and respond with the requested file,
- * if it is available.  If the file is not found, respond with a 404 error.
- * If the request is malformed or the request method has not been implemented,
- * respond with a 400 error message.
- * @param client Client socket file descriptor
- */
-void handle_client(int client) {
-	// read incoming http request
-	char request_line[1024];
-	int n;
-	n = read_socket(client, request_line, sizeof(request_line));
-
-	printf("request: %s\n", request_line);
-
-	// consume the rest of the header, we don't need it
-	char discard[256];
-	discard[0] = 'A'; discard[1] = '\0';
-	while((n > 0) && strcmp(discard, "\n")) {
-		read_socket(client, discard, sizeof(discard));
-	}
-
-	// parse request line from header
-	char method[32];
-	char uri[256];
-	char version[32];
-
-	int rv = process_request(request_line, method, uri, version);
-	if (rv == -1) {
-		respond_bad_request(client);
-		return;
-	}
-
-	if (strcmp(method, "GET") != 0)	{		// This server only supports GET
-		respond_bad_request(client);
-		return;
-	}
-
-	printf("Method: %s\n", method);
-	printf("URI: %s\n", uri);
-	printf("Version: %s\n", version);
-
-	char filename[256];			// files are served from the current working directory,
-	strcpy(filename, uri+1);	// so strip off the leading '/' from the URI
-
-	send_file(client, filename);
-}
-
-/**
  * Split Request into three parts: the request method, the URI, and HTTP
  * version number.  Each field is separated by a single space.  The buffers
  * passed in to hold the method, URI, and version must be large enough to
@@ -322,72 +352,4 @@ int process_request(char *request, char *method, char *URI, char *version) {
 
 	strcpy(request, temp);		// restore the original request string and return
 	return 0;
-}
-
-/**
- * Send a basic 400 Bad Request error message.
- * @param client Socket to send on
- */
-void respond_bad_request(int client) {
-	char buf[1024];
-
-	sprintf(buf, "HTTP/1.0 400 Bad Request\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "Content-Type: text/html\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<HTML><TITLE>Bad Request</TITLE>\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<BODY><P>The server could not fulfill\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "your request because the request contained\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "an error or that feature has not been implemented.</P>\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "</BODY></HTML>\r\n");
-	send(client, buf, strlen(buf), 0);
-}
-
-/**
- * Send a basic 404 Not Found error message.
- * @param client Socket to send on
- */
-void respond_not_found(int client) {
-	char buf[1024];
-
-	sprintf(buf, "HTTP/1.0 404 Not Found\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "Content-Type: text/html\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<HTML><TITLE>Not Found</TITLE>\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<BODY><P>The server could not fulfill\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "your request because the resource specified\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "is unavailable or nonexistent.</P>\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "</BODY></HTML>\r\n");
-	send(client, buf, strlen(buf), 0);
-}
-
-/**
- * Send a very basic 200 OK response.  The content type is
- * assumed to be text as clients should not process a text file.
- * Additional filetype checking could be performed to make this more accurate.
- * @param client Socket to send on
- */
-void respond_ok(int client, const char *filename) {
-	char buf[1024];
-	(void)filename;		// can be used to guess a file type
-
-	sprintf(buf, "HTTP/1.0 200 OK\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "Content-Type: text\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "\r\n");
-	send(client, buf, strlen(buf), 0);
 }

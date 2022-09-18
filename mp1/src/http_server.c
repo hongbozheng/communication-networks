@@ -102,6 +102,8 @@ void file_found(int client, const char *filename) {
 	send(client,buf,strlen(buf),0);
 	sprintf(buf,"Content-Type: text\r\n");
 	send(client,buf,strlen(buf),0);
+    sprintf(buf,"Found file %s\r\n",filename);
+	send(client,buf,strlen(buf),0);
 	sprintf(buf,"\r\n");
 	send(client,buf,strlen(buf),0);
 }
@@ -123,7 +125,7 @@ void unknown_request(int client) {
 void send_file(int client, const char *filename) {
 	FILE *f, *f_out = NULL;     // create ptr for read file & output file
 
-	f= fopen(filename, "rb");   // try open read file
+	f= fopen(filename,"rb");   // try open read file
 	if (f == NULL) {            // read file does not exist
 		file_not_found(client);
 		return;
@@ -131,7 +133,7 @@ void send_file(int client, const char *filename) {
 
 	file_found(client,filename);   // why is this not printing anything ???
 
-	f_out = fdopen(client, "wb");
+	f_out = fdopen(client,"wb");
 	char buf[4096];
 	int read_obj = 0;
 	do {
@@ -148,26 +150,24 @@ void send_file(int client, const char *filename) {
 }
 
 void handle_client(int client) {
-	// read incoming http request
-	char http_request[1024];
+	char http_request[1024];    // read income http request
 	int read_obj;
-	read_obj = read_socket(client,http_request,sizeof request_line);
+	read_obj = read_socket(client,http_request,sizeof http_request);
 
 	printf("[REQUEST]: %s\n",http_request);
 
-	// consume the rest of the header, we don't need it
 	char discard[256];
 	discard[0] = 'A'; discard[1] = '\0';
-	while((n > 0) && strcmp(discard, "\n")) {
-		read_socket(client, discard, sizeof(discard));
-	}
+	while((read_obj > 0) && strcmp(discard, "\n")) {
+        read_socket(client, discard, sizeof(discard));
+    }
 
 	// parse request line from header
 	char method[32];
 	char uri[256];
 	char version[32];
 
-	int rv = process_request(request_line, method, uri, version);
+	int rv = process_request(http_request, method, uri, version);
 	if (rv == -1) {
 		unknown_request(client);
 		return;
@@ -185,68 +185,9 @@ void handle_client(int client) {
 	char filename[256];			// files are served from the current working directory,
 	strcpy(filename, uri+1);	// so strip off the leading '/' from the URI
 
-	send_file(client, filename);
+	send_file(client,filename);
 }
 
-int main(int argc, char *argv[]) {
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
-	struct sockaddr_storage their_addr; // connector's address information
-	socklen_t sin_size;
-	struct sigaction sa;
-	char s[INET6_ADDRSTRLEN];
-
-    if (argc != 2) {
-        fprintf(stderr, "usage: http_server <port>\n");
-        exit(1);
-    }
-
-	sockfd = bind_server(argv[1]);
-
-	if (listen(sockfd, BACKLOG) == -1) {
-		perror("listen");
-		exit(1);
-	}
-
-	sa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
-
-	printf("server: waiting for connections...\n");
-
-	while(1) {  // main accept() loop
-		sin_size = sizeof their_addr;
-		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-		if (new_fd == -1) {
-			perror("accept");
-			continue;
-		}
-
-		inet_ntop(their_addr.ss_family,
-			get_in_addr((struct sockaddr *)&their_addr),
-			s, sizeof s);
-		printf("\nserver: got connection from %s\n", s);
-
-		if (!fork()) {  	// this is the child process
-			close(sockfd); 	// child doesn't need the listener
-			handle_client(new_fd);
-			close(new_fd);
-			exit(0);
-		}
-		close(new_fd);  // parent doesn't need this
-	}
-
-	return 0;
-}
-
-/**
- * Bind a new socket to localhost at the specified port.
- * @param  port Port to bind socket to
- * @return      New socket file descriptor
- */
 int bind_server(const char *port) {
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
@@ -297,11 +238,65 @@ int bind_server(const char *port) {
 		return 2;
 	}
 
-	printf("http_server: socket bound to port %s\n", port);
+	printf("[HTTP SERVER]: socket bound to port %s\n", port);
 
 	freeaddrinfo(servinfo); // all done with this structure
 
 	return sockfd;
+}
+
+int main(int argc, char *argv[]) {
+	if (argc != 2) {
+        fprintf(stderr, "usage: http_server <port>\n");
+        exit(1);
+    }
+
+    int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+	struct sockaddr_storage their_addr; // connector's address information
+	socklen_t sin_size;
+	struct sigaction sa;
+	char s[INET6_ADDRSTRLEN];
+
+	sockfd = bind_server(argv[1]);
+
+	if (listen(sockfd, BACKLOG) == -1) {
+		perror("listen");
+		exit(1);
+	}
+
+	sa.sa_handler = sigchld_handler; // reap all dead processes
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(1);
+	}
+
+	printf("[SERVER]: waiting for connections...\n");
+
+	while(1) {  // main accept() loop
+		sin_size = sizeof their_addr;
+		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+		if (new_fd == -1) {
+			perror("accept");
+			continue;
+		}
+
+		inet_ntop(their_addr.ss_family,
+			get_in_addr((struct sockaddr *)&their_addr),
+			s, sizeof s);
+		printf("\n[SERVER]: got connection from %s\n", s);
+
+		if (!fork()) {  	// this is the child process
+			close(sockfd); 	// child doesn't need the listener
+			handle_client(new_fd);
+			close(new_fd);
+			exit(0);
+		}
+		close(new_fd);  // parent doesn't need this
+	}
+
+	return 0;
 }
 
 /**

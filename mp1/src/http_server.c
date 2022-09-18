@@ -1,6 +1,15 @@
 /*
-** server.c -- a stream socket server demo
-*/
+ * FILENAME: http_server.c
+ * 
+ * DESCRIPTION: a http server application
+ *              Supports multiple simultaneous http GET requests
+ *              responding with 200 OK, 404 NOT FOUND, or 400 BAD REQUEST
+ *
+ * DATE: Saturday, Sep 17th, 2022
+ *
+ * AUTHOR:
+ *
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,18 +24,28 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define PORT "3490"  // the port users will be connecting to
+#define BACKLOG 10	 		// how many pending connections queue will hold
 
-#define BACKLOG 10	 // how many pending connections queue will hold
+// function signatures
+void sigchld_handler(int s);
+void *get_in_addr(struct sockaddr *sa);
+int sock_getline(int sock, char *buf, int size);
+int main(int argc, char *argv[]);
+int bind_server(const char *port);
+void handle_client(int client);
+int process_request(char *request, char *method, char *URI, char *version);
+void respond_bad_request(int client);
+void respond_not_found(int client);
+void respond_ok(int client, const char *filename);
+void send_file(int client, const char *filename);
 
-void sigchld_handler(int s)
-{
+
+void sigchld_handler(int s) {
+	(void)s;
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
+void *get_in_addr(struct sockaddr *sa) {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	}
@@ -62,106 +81,47 @@ int read_socket(int socket, char *buf, int buf_size){
     return i;
 }
 
+void send_file(int client, const char *filename) {
+	FILE *f, *f_out = NULL;
 
-void handle_client(int client) {
-    char http_request[1024];
-    int request_len = read_socket(client, http_request, sizeof http_request);
-    
-    printf("[REQUEST]: %s\n",http_request);
-    
-    // why consume the rest of the header
+	f= fopen(filename, "rb");
+	if (f == NULL) {
+		respond_not_found(client);
+		return;
+	}
 
-    char method[32];
-    char uri[256];
-    char version[32];
-}
+	// send 200 OK header
+	respond_ok(client, filename);
 
-void file_not_found(int client, const char *filename){
-    char buf[1024];
+	f_out = fdopen(client, "wb");
+	char buf[4096];
+	int read_obj = 0;
+	do {
+		read_obj = fread(buf,1,sizeof buf,f);
+		if ((read_obj < sizeof buf) && !feof(f)) {
+				fprintf(stderr, "[ERROR]: An error occured while reading from file %s\n",filename);
+				break;
+	    }
+		fwrite(buf,1,read_obj,f_out);
+	} while(!feof(f));
 
-    sprintf(buf,"HTTP/1.1 404 NOT FOUND !\r\n");
-    send(client,buf,strlen(buf),0);
-    sprintf(buf,"Content-Type: text/html\r\n");
-    send(client,buf,strlen(buf),0);
-    sprintf(buf,"The server could not find the file %s\r\n",filename);
-    send(client,buf,strlen(buf),0);
-}
-
-void file_found(int client, const char *filename){
-    char buf[1024];
-
-    sprintf(buf,"HTTP/1.1 200 OK\r\n");
-    send(client,buf,strlen(buf),0);
-    sprintf(buf,"Context-Type: text\r\n");
-    send(client,buf,strlen(buf),0);
-    sprintf(buf,"%s file found\r\n");
-    send(client,buf,strlen(buf),0);
-}
-
-void send_file(int client, const char *filename){
-    FILE *f, *socket = NULL;
-    
-    f = fopen(filename,"rb");
-    if (f == NULL) {
-        file_not_found(client,filename);
-    }
-    file_found(client,filename); 
+	fclose(f_out);
+	fclose(f);
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr,"[USAGE]: ./http_server <port>\n");
-        exit(1);
-    }
-
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
-	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information
 	socklen_t sin_size;
 	struct sigaction sa;
-	int yes=1;
 	char s[INET6_ADDRSTRLEN];
-	int rv;
 
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE; // use my IP
+    if (argc != 2) {
+        fprintf(stderr, "usage: http_server <port>\n");
+        exit(1);
+    }
 
-	if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return 1;
-	}
-
-	// loop through all the results and bind to the first we can
-	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype,
-				p->ai_protocol)) == -1) {
-			perror("server: socket");
-			continue;
-		}
-
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
-				sizeof(int)) == -1) {
-			perror("setsockopt");
-			exit(1);
-		}
-
-		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("server: bind");
-			continue;
-		}
-
-		break;
-	}
-
-	if (p == NULL)  {
-		fprintf(stderr, "server: failed to bind\n");
-		return 2;
-	}
-
-	freeaddrinfo(servinfo); // all done with this structure
+	sockfd = bind_server(argv[1]);
 
 	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");
@@ -189,12 +149,11 @@ int main(int argc, char *argv[]) {
 		inet_ntop(their_addr.ss_family,
 			get_in_addr((struct sockaddr *)&their_addr),
 			s, sizeof s);
-		printf("server: got connection from %s\n", s);
+		printf("\nserver: got connection from %s\n", s);
 
-		if (!fork()) { // this is the child process
-			close(sockfd); // child doesn't need the listener
-			if (send(new_fd, "Hello, world!", 13, 0) == -1)
-				perror("send");
+		if (!fork()) {  	// this is the child process
+			close(sockfd); 	// child doesn't need the listener
+			handle_client(new_fd);
 			close(new_fd);
 			exit(0);
 		}
@@ -204,3 +163,231 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
+/**
+ * Bind a new socket to localhost at the specified port.
+ * @param  port Port to bind socket to
+ * @return      New socket file descriptor
+ */
+int bind_server(const char *port) {
+	int sockfd;
+	struct addrinfo hints, *servinfo, *p;
+	int yes = 1;
+	int rv;
+
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE; // use my IP
+
+	if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
+
+	// loop through all the results and bind to the first we can
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == -1) {
+			perror("http_server: socket");
+			continue;
+		}
+
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
+				sizeof(int)) == -1) {
+			perror("setsockopt");
+			exit(1);
+		}
+
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &yes,
+				sizeof(int)) == -1) {
+			perror("setsockopt");
+			exit(1);
+		}
+
+		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("http_server: bind");
+			continue;
+		}
+
+		break;
+	}
+
+	if (p == NULL)  {
+		fprintf(stderr, "http_server: failed to bind\n");
+		return 2;
+	}
+
+	printf("http_server: socket bound to port %s\n", port);
+
+	freeaddrinfo(servinfo); // all done with this structure
+
+	return sockfd;
+}
+
+/**
+ * Main handler function to process incoming requests (called by child processes).
+ * Read the request from the client and respond with the requested file,
+ * if it is available.  If the file is not found, respond with a 404 error.
+ * If the request is malformed or the request method has not been implemented,
+ * respond with a 400 error message.
+ * @param client Client socket file descriptor
+ */
+void handle_client(int client) {
+	// read incoming http request
+	char request_line[1024];
+	int n;
+	n = read_socket(client, request_line, sizeof(request_line));
+
+	printf("request: %s\n", request_line);
+
+	// consume the rest of the header, we don't need it
+	char discard[256];
+	discard[0] = 'A'; discard[1] = '\0';
+	while((n > 0) && strcmp(discard, "\n")) {
+		read_socket(client, discard, sizeof(discard));
+	}
+
+	// parse request line from header
+	char method[32];
+	char uri[256];
+	char version[32];
+
+	int rv = process_request(request_line, method, uri, version);
+	if (rv == -1) {
+		respond_bad_request(client);
+		return;
+	}
+
+	if (strcmp(method, "GET") != 0)	{		// This server only supports GET
+		respond_bad_request(client);
+		return;
+	}
+
+	printf("Method: %s\n", method);
+	printf("URI: %s\n", uri);
+	printf("Version: %s\n", version);
+
+	char filename[256];			// files are served from the current working directory,
+	strcpy(filename, uri+1);	// so strip off the leading '/' from the URI
+
+	send_file(client, filename);
+}
+
+/**
+ * Split Request into three parts: the request method, the URI, and HTTP
+ * version number.  Each field is separated by a single space.  The buffers
+ * passed in to hold the method, URI, and version must be large enough to
+ * hold the split strings.  Note: although the state of request will be
+ * modified, it will be restored before returning.
+ * @param  request The HTTP header request-line to parse
+ * @param  method  The HTTP method (GET, POST, etc.)
+ * @param  URI     The resource URI for the request
+ * @param  version The HTTP protocol version (HTTP/1.0, etc.)
+ * @return         Return 0 on success, -1 if any of the string splits fail
+ */
+int process_request(char *request, char *method, char *URI, char *version) {
+	int len = strlen(request);	// save a copy of request
+	char temp[len];				// because the string splitting
+	strcpy(temp, request);		// will overwrite the spaces with '\0'
+
+	char *pch;
+
+	pch = strtok(request, " ");	// split on the first space
+	if (pch) {
+		strcpy(method, pch);
+	}
+	else {
+		strcpy(request, temp);
+		return -1;
+	}
+
+	pch = strtok(NULL, " ");	// split on the second space
+	if (pch) {
+		strcpy(URI, pch);
+	}
+	else {
+		strcpy(request, temp);
+		return -1;
+	}
+
+	pch = strtok(NULL, "\n");	// split on the ending newline
+	if (pch) {
+		strcpy(version, pch);
+	}
+	else {
+		strcpy(request, temp);
+		return -1;
+	}
+
+	strcpy(request, temp);		// restore the original request string and return
+	return 0;
+}
+
+/**
+ * Send a basic 400 Bad Request error message.
+ * @param client Socket to send on
+ */
+void respond_bad_request(int client) {
+	char buf[1024];
+
+	sprintf(buf, "HTTP/1.0 400 Bad Request\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "Content-Type: text/html\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<HTML><TITLE>Bad Request</TITLE>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<BODY><P>The server could not fulfill\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "your request because the request contained\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "an error or that feature has not been implemented.</P>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "</BODY></HTML>\r\n");
+	send(client, buf, strlen(buf), 0);
+}
+
+/**
+ * Send a basic 404 Not Found error message.
+ * @param client Socket to send on
+ */
+void respond_not_found(int client) {
+	char buf[1024];
+
+	sprintf(buf, "HTTP/1.0 404 Not Found\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "Content-Type: text/html\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<HTML><TITLE>Not Found</TITLE>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<BODY><P>The server could not fulfill\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "your request because the resource specified\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "is unavailable or nonexistent.</P>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "</BODY></HTML>\r\n");
+	send(client, buf, strlen(buf), 0);
+}
+
+/**
+ * Send a very basic 200 OK response.  The content type is
+ * assumed to be text as clients should not process a text file.
+ * Additional filetype checking could be performed to make this more accurate.
+ * @param client Socket to send on
+ */
+void respond_ok(int client, const char *filename) {
+	char buf[1024];
+	(void)filename;		// can be used to guess a file type
+
+	sprintf(buf, "HTTP/1.0 200 OK\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "Content-Type: text\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "\r\n");
+	send(client, buf, strlen(buf), 0);
+}

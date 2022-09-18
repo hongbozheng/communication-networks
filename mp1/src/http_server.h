@@ -2,9 +2,9 @@
 #define HTTP_SERVER_H
 
 // macro
-#define BACKLOG 10              // how many pending connections queue will hold
-#define REQUEST_ARG_NUM 3
-#define URI_FIRST_CHAR_INDEX 0
+#define BACKLOG                 10  // how many pending connections queue will hold
+#define REQUEST_ARG_NUM         3
+#define URI_FIRST_CHAR_INDEX    0
 
 // function signatures
 void sigchld_handler(int s);

@@ -49,7 +49,6 @@ void *get_in_addr(struct sockaddr *sa) {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	}
-
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
@@ -130,8 +129,7 @@ void send_file(int client, const char *filename) {
 		file_not_found(client);
 		return;
 	}
-
-	file_found(client,filename);   // why is this not printing anything ???
+	file_found(client,filename);   // why is this not printing anything ??? make sense
 
 	f_out = fdopen(client,"wb");
 	char buf[4096];
@@ -149,14 +147,68 @@ void send_file(int client, const char *filename) {
 	fclose(f);      // close read file
 }
 
+int bind_server(const char *port) {
+	int sockfd;
+	struct addrinfo hints, *servinfo, *p;
+	int yes = 1;
+	int rv;
+
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE; // use my IP
+
+	if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
+
+	// loop through all the results and bind to the first we can
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == -1) {
+			perror("[HTTP_SERVER]: socket");
+			continue;
+		}
+
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &yes,
+				sizeof(int)) == -1) {
+			perror("setsockopt");
+			exit(1);
+		}
+
+		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("[HTTP_SERVER]: bind");
+			continue;
+		}
+
+		break;
+	}
+
+	if (p == NULL)  {
+		fprintf(stderr, "[HTTP_SERVER]: failed to bind\n");
+		return 2;
+	}
+
+	printf("[HTTP SERVER]: socket bound to port %s\n", port);
+
+	freeaddrinfo(servinfo); // all done with this structure
+
+	return sockfd;
+}
+
 void handle_client(int client) {
 	char http_request[1024];    // read income http request
 	int read_obj;
-	read_obj = read_socket(client,http_request,sizeof http_request);
-
+	
+    read_obj = read_socket(client,http_request,sizeof http_request);
 	printf("[REQUEST]: %s\n",http_request);
-
-	char discard[256];
+    
+    //read_obj = read_socket(client,http_request,sizeof http_request);
+	//printf("[REQUEST]: %s\n",http_request);
+	
+    char discard[256];
 	discard[0] = 'A'; discard[1] = '\0';
 	while((read_obj > 0) && strcmp(discard, "\n")) {
         read_socket(client, discard, sizeof(discard));
@@ -188,63 +240,6 @@ void handle_client(int client) {
 	send_file(client,filename);
 }
 
-int bind_server(const char *port) {
-	int sockfd;
-	struct addrinfo hints, *servinfo, *p;
-	int yes = 1;
-	int rv;
-
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE; // use my IP
-
-	if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return 1;
-	}
-
-	// loop through all the results and bind to the first we can
-	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype,
-				p->ai_protocol)) == -1) {
-			perror("http_server: socket");
-			continue;
-		}
-
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
-				sizeof(int)) == -1) {
-			perror("setsockopt");
-			exit(1);
-		}
-
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &yes,
-				sizeof(int)) == -1) {
-			perror("setsockopt");
-			exit(1);
-		}
-
-		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("http_server: bind");
-			continue;
-		}
-
-		break;
-	}
-
-	if (p == NULL)  {
-		fprintf(stderr, "http_server: failed to bind\n");
-		return 2;
-	}
-
-	printf("[HTTP SERVER]: socket bound to port %s\n", port);
-
-	freeaddrinfo(servinfo); // all done with this structure
-
-	return sockfd;
-}
-
 int main(int argc, char *argv[]) {
 	if (argc != 2) {
         fprintf(stderr, "usage: http_server <port>\n");
@@ -257,7 +252,7 @@ int main(int argc, char *argv[]) {
 	struct sigaction sa;
 	char s[INET6_ADDRSTRLEN];
 
-	sockfd = bind_server(argv[1]);
+	sockfd = bind_server(argv[1]);  // bind_server to port #
 
 	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");

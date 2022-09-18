@@ -26,6 +26,7 @@
 
 #define BACKLOG 10	 		// how many pending connections queue will hold
 #define REQUEST_ARG_NUM 3
+#define URI_FIRST_CHAR_INDEX 0
 
 // function signatures
 void sigchld_handler(int s);
@@ -63,9 +64,7 @@ int read_socket(int socket, char *buf, int buf_size){
         recv_len = recv(socket,&c,1,0);         // read 1 char into char c
         if (recv_len > 0) {
             if (c == '\r') {                    // if recv char '\r'
-                // Is MSG_PEEK necessary ???
-                // maybe it is
-                // https://pubs.opengroup.org/onlinepubs/007904975/functions/recv.html
+                // Reference: https://pubs.opengroup.org/onlinepubs/007904975/functions/recv.html
                 recv_len = recv(socket,&c,1,MSG_PEEK);
                 if ((recv_len > 0) && (c == '\n')) recv(socket,&c,1,0);
                 else c = '\n';                  // add char '\n' manually
@@ -125,7 +124,7 @@ void unknown_request(int client) {
 void send_file(int client, const char *filename) {
 	FILE *f, *f_out = NULL;     // create ptr for read file & output file
 
-	f= fopen(filename,"rb");   // try open read file
+	f= fopen(filename,"rb");    // try open read file
 	if (f == NULL) {            // read file does not exist
 		file_not_found(client);
 		return;
@@ -208,8 +207,8 @@ int process_request(char *request, char *method, char *URI, char *version) {
     int argc = 0;
     
     pch = strtok(request," ");
-    while (pch != NULL){
-        switch (argc) {
+    while (pch != NULL){            // start to parse http request args
+        switch (argc) {             // Reference: https://cplusplus.com/reference/cstring/strtok/
             case 0:
                 strcpy(method,pch);
                 break;
@@ -249,13 +248,13 @@ void handle_client(int client) {
 	char uri[256];
 	char version[32];
 
-	int rv = process_request(http_request, method, uri, version);
-	if (rv == -1) {
+	int request_check = process_request(http_request, method, uri, version);
+	if (request_check == -1) {
 		unknown_request(client);
 		return;
 	}
 
-	if (strcmp(method, "GET") != 0)	{		// This server only supports GET
+	if (strcmp(method,"GET") != 0) {
 		unknown_request(client);
 		return;
 	}
@@ -263,11 +262,14 @@ void handle_client(int client) {
 	printf("Method: %s\n", method);
 	printf("URI: %s\n", uri);
 	printf("Version: %s\n", version);
+    
+    // remove the beginning char '/'
+    // Reference: https://stackoverflow.com/questions/5457608/how-to-remove\
+                  -the-character-at-a-given-index-from-a-string-in-c
+    memmove(&uri[URI_FIRST_CHAR_INDEX],&uri[URI_FIRST_CHAR_INDEX+1],
+            strlen(uri)-URI_FIRST_CHAR_INDEX);
 
-	char filename[256];			// files are served from the current working directory,
-	strcpy(filename, uri+1);	// so strip off the leading '/' from the URI
-
-	send_file(client,filename);
+	send_file(client,uri);
 }
 
 int main(int argc, char *argv[]) {

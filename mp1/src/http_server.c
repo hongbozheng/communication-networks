@@ -156,7 +156,7 @@ int bind_server(const char *port) {
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE; // use my IP
+	hints.ai_flags = AI_PASSIVE;        // use my IP
 
 	if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
@@ -199,10 +199,6 @@ int bind_server(const char *port) {
 }
 
 int process_request(char *request, char *method, char *URI, char *version) {
-	//int len = strlen(request);	// save a copy of request
-	//char temp[len];				// because the string splitting
-	//strcpy(temp, request);		// will overwrite the spaces with '\0'
-	
     char *pch;
     int argc = 0;
     
@@ -226,7 +222,6 @@ int process_request(char *request, char *method, char *URI, char *version) {
         ++argc;
         pch = strtok(NULL," ");
     }
-	//strcpy(request, temp);		// restore the original request string and return
 	return 0;
 }
 
@@ -274,24 +269,24 @@ void handle_client(int client) {
 
 int main(int argc, char *argv[]) {
 	if (argc != 2) {
-        fprintf(stderr, "usage: http_server <port>\n");
+        fprintf(stderr, "[USAGE]: ./http_server <port>\n");
         exit(1);
     }
 
-    int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+    int sockfd, new_fd;                 // listen on sock_fd, new connection on new_fd
 	struct sockaddr_storage their_addr; // connector's address information
 	socklen_t sin_size;
 	struct sigaction sa;
 	char s[INET6_ADDRSTRLEN];
 
-	sockfd = bind_server(argv[1]);  // bind_server to port #
+	sockfd = bind_server(argv[1]);      // bind_server to port #
 
 	if (listen(sockfd, BACKLOG) == -1) {
 		perror("listen");
 		exit(1);
 	}
 
-	sa.sa_handler = sigchld_handler; // reap all dead processes
+	sa.sa_handler = sigchld_handler;    // reap all dead processes
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
@@ -314,13 +309,13 @@ int main(int argc, char *argv[]) {
 			s, sizeof s);
 		printf("[SERVER]: got connection from %s\n", s);
 
-		if (!fork()) {  	// this is the child process
-			close(sockfd); 	// child doesn't need the listener
+		if (!fork()) {  	        // this is the child process
+			close(sockfd); 	        // child doesn't need the listener
 			handle_client(new_fd);
 			close(new_fd);
 			exit(0);
 		}
-		close(new_fd);  // parent doesn't need this
+		close(new_fd);              // parent doesn't need this
 	}
 
 	return 0;

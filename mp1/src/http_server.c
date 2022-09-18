@@ -1,4 +1,4 @@
-/*
+/**
  * FILENAME: http_server.c
  * 
  * DESCRIPTION: a http server application
@@ -198,6 +198,44 @@ int bind_server(const char *port) {
 	return sockfd;
 }
 
+int process_request(char *request, char *method, char *URI, char *version) {
+	int len = strlen(request);	// save a copy of request
+	char temp[len];				// because the string splitting
+	strcpy(temp, request);		// will overwrite the spaces with '\0'
+
+	char *pch;
+
+	pch = strtok(request, " ");	// split on the first space
+	if (pch) {
+		strcpy(method, pch);
+	}
+	else {
+		strcpy(request, temp);
+		return -1;
+	}
+
+	pch = strtok(NULL, " ");	// split on the second space
+	if (pch) {
+		strcpy(URI, pch);
+	}
+	else {
+		strcpy(request, temp);
+		return -1;
+	}
+
+	pch = strtok(NULL, "\n");	// split on the ending newline
+	if (pch) {
+		strcpy(version, pch);
+	}
+	else {
+		strcpy(request, temp);
+		return -1;
+	}
+
+	strcpy(request, temp);		// restore the original request string and return
+	return 0;
+}
+
 void handle_client(int client) {
 	char http_request[1024];    // read income http request
 	int read_obj;
@@ -205,16 +243,13 @@ void handle_client(int client) {
     read_obj = read_socket(client,http_request,sizeof http_request);
 	printf("[REQUEST]: %s\n",http_request);
     
-    //read_obj = read_socket(client,http_request,sizeof http_request);
-	//printf("[REQUEST]: %s\n",http_request);
-	
     char discard[256];
 	discard[0] = 'A'; discard[1] = '\0';
 	while((read_obj > 0) && strcmp(discard, "\n")) {
         read_socket(client, discard, sizeof(discard));
     }
-
-	// parse request line from header
+	
+    // parse request line from header
 	char method[32];
 	char uri[256];
 	char version[32];
@@ -267,7 +302,7 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	printf("[SERVER]: waiting for connections...\n");
+	printf("[SERVER]: waiting for connections...\n\n");
 
 	while(1) {  // main accept() loop
 		sin_size = sizeof their_addr;
@@ -280,7 +315,7 @@ int main(int argc, char *argv[]) {
 		inet_ntop(their_addr.ss_family,
 			get_in_addr((struct sockaddr *)&their_addr),
 			s, sizeof s);
-		printf("\n[SERVER]: got connection from %s\n", s);
+		printf("[SERVER]: got connection from %s\n", s);
 
 		if (!fork()) {  	// this is the child process
 			close(sockfd); 	// child doesn't need the listener
@@ -291,55 +326,5 @@ int main(int argc, char *argv[]) {
 		close(new_fd);  // parent doesn't need this
 	}
 
-	return 0;
-}
-
-/**
- * Split Request into three parts: the request method, the URI, and HTTP
- * version number.  Each field is separated by a single space.  The buffers
- * passed in to hold the method, URI, and version must be large enough to
- * hold the split strings.  Note: although the state of request will be
- * modified, it will be restored before returning.
- * @param  request The HTTP header request-line to parse
- * @param  method  The HTTP method (GET, POST, etc.)
- * @param  URI     The resource URI for the request
- * @param  version The HTTP protocol version (HTTP/1.0, etc.)
- * @return         Return 0 on success, -1 if any of the string splits fail
- */
-int process_request(char *request, char *method, char *URI, char *version) {
-	int len = strlen(request);	// save a copy of request
-	char temp[len];				// because the string splitting
-	strcpy(temp, request);		// will overwrite the spaces with '\0'
-
-	char *pch;
-
-	pch = strtok(request, " ");	// split on the first space
-	if (pch) {
-		strcpy(method, pch);
-	}
-	else {
-		strcpy(request, temp);
-		return -1;
-	}
-
-	pch = strtok(NULL, " ");	// split on the second space
-	if (pch) {
-		strcpy(URI, pch);
-	}
-	else {
-		strcpy(request, temp);
-		return -1;
-	}
-
-	pch = strtok(NULL, "\n");	// split on the ending newline
-	if (pch) {
-		strcpy(version, pch);
-	}
-	else {
-		strcpy(request, temp);
-		return -1;
-	}
-
-	strcpy(request, temp);		// restore the original request string and return
 	return 0;
 }

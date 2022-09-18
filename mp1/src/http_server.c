@@ -25,6 +25,7 @@
 #include <signal.h>
 
 #define BACKLOG 10	 		// how many pending connections queue will hold
+#define REQUEST_ARG_NUM 3
 
 // function signatures
 void sigchld_handler(int s);
@@ -199,40 +200,34 @@ int bind_server(const char *port) {
 }
 
 int process_request(char *request, char *method, char *URI, char *version) {
-	int len = strlen(request);	// save a copy of request
-	char temp[len];				// because the string splitting
-	strcpy(temp, request);		// will overwrite the spaces with '\0'
-
-	char *pch;
-
-	pch = strtok(request, " ");	// split on the first space
-	if (pch) {
-		strcpy(method, pch);
-	}
-	else {
-		strcpy(request, temp);
-		return -1;
-	}
-
-	pch = strtok(NULL, " ");	// split on the second space
-	if (pch) {
-		strcpy(URI, pch);
-	}
-	else {
-		strcpy(request, temp);
-		return -1;
-	}
-
-	pch = strtok(NULL, "\n");	// split on the ending newline
-	if (pch) {
-		strcpy(version, pch);
-	}
-	else {
-		strcpy(request, temp);
-		return -1;
-	}
-
-	strcpy(request, temp);		// restore the original request string and return
+	//int len = strlen(request);	// save a copy of request
+	//char temp[len];				// because the string splitting
+	//strcpy(temp, request);		// will overwrite the spaces with '\0'
+	
+    char *pch;
+    int argc = 0;
+    
+    pch = strtok(request," ");
+    while (pch != NULL){
+        switch (argc) {
+            case 0:
+                strcpy(method,pch);
+                break;
+            case 1:
+                strcpy(URI,pch);
+                break;
+            case 2:
+                strcpy(version,pch);
+                break;
+            default:
+                printf("[ERROR]: Too many args for REQUEST! Only 3 is needed !\n");
+                return -1;
+        }
+        printf("%s\n",pch);
+        ++argc;
+        pch = strtok(NULL," ");
+    }
+	//strcpy(request, temp);		// restore the original request string and return
 	return 0;
 }
 

@@ -2,6 +2,7 @@ obj/
 *
 !.gitignore
 !Makefile
+!*.h
 !*.c
 !*.sh
 !*.txt

@@ -278,20 +278,21 @@ void process_response(int sockfd) {
 
 	// read the socket as a file, echoing to the output
 	// file `sizeof(buffer)` bytes at a time.
-	FILE *f_out, *f;
-	f_out = fopen("output", "wb");
-	f = fdopen(sockfd, "rb");
+	FILE *f, *f_out = NULL;
 
-	do {
-		n = fread(buffer, 1, sizeof(buffer), sock);
+	f = fdopen(sockfd, "rb");
+	f_out = fopen("output", "wb");
+	
+    do {
+		n = fread(buffer, 1, sizeof(buffer),f);
 		if (n < sizeof(buffer)) {
-			if (!feof(sock)){
+			if (!feof(f)){
 				fprintf(stderr, "An error occured while reading from the socket.\n");
 				break;
 			}
 		}
-		fwrite(buffer, 1, n, out);
-	} while(!feof(sock));
+		fwrite(buffer, 1, n, f_out);
+	} while(!feof(f));
 
-    fclose(out);
+    fclose(f_out);
 }

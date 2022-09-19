@@ -2,8 +2,6 @@
  * FILENAME: http_client.c
  * 
  * DESCRIPTION: a http client application
- *              Supports multiple simultaneous http GET requests
- *              responding with 200 OK, 404 NOT FOUND, or 400 BAD REQUEST
  *
  * DATE: Saturday, Sep 17th, 2022
  *
@@ -21,8 +19,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-
-#define MAXDATASIZE 1024 // max number of bytes we can get at once
+#include "http_client.h"
 
 void *get_in_addr(struct sockaddr *sa) {
     if (sa->sa_family == AF_INET) {
@@ -145,12 +142,12 @@ void send_header(int sockfd, const char *host, const char *port, const char *pat
     printf("[HTTP CLIENT]: sending header to server\n");
 
     sprintf(header, "GET %s HTTP/1.1\r\n", path);
-    //send(sockfd, header, strlen(header), 0);
-    //sprintf(header, "Host: %s:%s\r\n", host, port);
-    //send(sockfd, header, strlen(header), 0);
-    //strcpy(header, "Connection: close\r\n");
-    //send(sockfd, header, strlen(header), 0);
-    //strcpy(header, "\r\n");
+    send(sockfd, header, strlen(header), 0);
+    sprintf(header, "Host: %s:%s\r\n", host, port);
+    send(sockfd, header, strlen(header), 0);
+    strcpy(header, "Connection: close\r\n");
+    send(sockfd, header, strlen(header), 0);
+    strcpy(header, "\r\n");
     send(sockfd, header, strlen(header), 0);
 }
 

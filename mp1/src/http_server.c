@@ -214,11 +214,11 @@ void handle_client(int client) {
     read_obj = read_socket(client,http_request,sizeof http_request);
 	printf("[REQUEST]: %s\n",http_request);
     
-    //char discard[256];
-	//discard[0] = 'A'; discard[1] = '\0';
-	//while((read_obj > 0) && strcmp(discard, "\n")) {
-    //   read_socket(client, discard, sizeof(discard));
-    //}
+    char discard[256];
+	discard[0] = 'A'; discard[1] = '\0';
+    while((read_obj > 0) && strcmp(discard, "\n")) {
+       read_socket(client, discard, sizeof(discard));
+    }
 	
     // parse request line from header
 	char method[32];
@@ -236,9 +236,9 @@ void handle_client(int client) {
 		return;
 	}
 
-	printf("Method: %s\n", method);
-	printf("URI: %s\n", uri);
-	printf("Version: %s\n", version);
+	printf("[METHOD]:  %s\n", method);
+	printf("[URI]:     %s\n", uri);
+	printf("[VERSION]: %s\n", version);
     
     // remove the beginning char '/'
     // Reference: https://stackoverflow.com/questions/5457608/how-to-remove\

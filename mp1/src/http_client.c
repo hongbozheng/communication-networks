@@ -24,39 +24,12 @@
 
 #define MAXDATASIZE 1024 // max number of bytes we can get at once
 
-// function signatures
-void *get_in_addr(struct sockaddr *sa);
-int sendall(int s, char *buf, int *len);
-int sock_getline(int sock, char *buf, int size);
-int main(int argc, char *argv[]);
-void process_input(const char *input, char *host, char *port, char *path);
-int connect_to_server(const char *hostname, const char *port);
-void send_header(int sockfd, const char *host, const char *port, const char *path);
-void process_response(int sockfd);
-
 void *get_in_addr(struct sockaddr *sa) {
     if (sa->sa_family == AF_INET) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
 
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
-int sendall(int s, char *buf, int *len) {
-    int total = 0;        // how many bytes we've sent
-    int bytesleft = *len; // how many we have left to send
-    int n;
-
-    while(total < *len) {
-        n = send(s, buf+total, bytesleft, 0);
-        if (n == -1) { break; }
-        total += n;
-        bytesleft -= n;
-    }
-
-    *len = total; // return number actually sent here
-
-    return n==-1?-1:0; // return -1 on failure, 0 on success
 }
 
 void process_input(const char *input, char *host, char *port, char *path) {
@@ -162,8 +135,7 @@ int connect_server(const char *hostname, const char *port) {
             s, sizeof(s));
     printf("[HTTP CLIENT]: connected to %s\n", s);
 
-    // all done with this structure, so we can free it
-    freeaddrinfo(servinfo);
+    freeaddrinfo(servinfo);     // all done with this structure
 
     return sockfd;
 }
@@ -183,29 +155,27 @@ void send_header(int sockfd, const char *host, const char *port, const char *pat
 }
 
 void process_response(int sockfd) {
-    printf("[HTTP CLIENT]: reading response...\n");
+    printf("[HTTP CLIENT]: receiving response from server\n");
 
-    char buf[4096];   	// buffer for received data
-	char status[32];		// buffer for status code
+    char buf[4096];     // buffer for received data
+	char status[32];    // buffer for status code
 
-    int read_obj = 0;
-
+    int read_obj = 0;   // obj read from socket
 	read_obj = read_socket(sockfd,buf,sizeof buf);
-	for (int i = 0; i < read_obj; i++) {
-		// copy everything after the first space, excluding the trailing \n
-		if (buf[i] == ' ') {
-			strcpy(status, buf+i+1);
-			break;
-		}
-	}
+    
+    char *p;
+    p = strchr(buf,' ');
+
+    if (p != NULL) {
+        strcpy(status,p+1);
+    }
 
 	while((read_obj = read_socket(sockfd,buf,sizeof buf)) != 0) {
 		if (strcmp(buf,"\n") == 0)
 			break;
     }
 
-	// if we got any status other than "200 OK" then something went wrong
-	if (strncmp(status, "200 OK", 6) != 0) {
+	if (strncmp(status,"200 OK",6) != 0) {
 		fprintf(stderr, "[ERROR]: Unable to download the file %s\n",status);
 		return;
 	}

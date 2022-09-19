@@ -59,6 +59,54 @@ int sendall(int s, char *buf, int *len) {
     return n==-1?-1:0; // return -1 on failure, 0 on success
 }
 
+/**
+ * Parse the input for the server hostname, port, and file path of the
+ * requested download.  If no port is specified in the input, a default
+ * value of 80 is chosen (standard HTTP port).  Similarly, if no file
+ * path is given, a default value of "/index.html" is returned.
+ * @param input string to be parsed
+ * @param host  the hostname to connect to
+ * @param port  the port to connect on
+ * @param path  the path to download
+ */
+void process_input(const char *input, char *host, char *port, char *path) {
+    char temp[strlen(input)];
+
+    // strip "http://" from argument if necessary
+    if (strncmp(input, "http://", 7) == 0)
+        strcpy(temp, input+7);
+    else
+        strcpy(temp, input);
+
+    // separate the hostname (and port) from the file path
+    // if no '/' is found (path was not specified), assume "/index.html"
+    char *pch;
+    pch = strchr(temp, '/');
+    if (pch != NULL) {
+        int len = pch - temp;
+        strncpy(host, temp, len);
+        strcpy(path, pch);
+    }
+    else {
+        strcpy(path, "/index.html");
+    }
+
+    // pull the port out of the hostname
+    // if no port was specified, assume port 80
+    pch = strchr(host, ':');
+    if (pch != NULL) {
+        int len = pch - host;
+        strcpy(port, pch+1);
+        host[len] = '\0';
+    }
+    else {
+        strcpy(port, "80");
+    }
+
+	printf("Downloading %s from %s:%s\n", path, host, port);
+
+}
+
 int read_socket(int socket, char *buf, int buf_size){
     int recv_len = 0;   // recv char length
     char c = '\0';      // store char read from socket
@@ -135,117 +183,6 @@ int connect_server(const char *hostname, const char *port) {
     return sockfd;
 }
 
-int main(int argc, char* argv[]) {
-    int sockfd;              // file descriptor for socket
-
-    char hostname[512];     // hostnames may be any string, lets assume they will be shorter than 512 characters
-    char port[6];           // ports may be 0-65535
-    char path[512];         // paths should be far shorter than 512 characters
-
-    // zero out the buffers to avoid garbage data
-    memset(hostname, 0, 512);
-    memset(port, 0, 6);
-    memset(path, 0, 512);
-
-    if (argc != 2) {
-        fprintf(stderr, "[USAGE]: ./http_client http://<host>:<port>/<path>\n");
-        exit(1);
-    }
-
-    // get the hostname, port number, and file path
-    process_input(argv[1], hostname, port, path);
-
-    // create a new socket connection to the server
-    if ((sockfd = connect_server(hostname, port)) == 0) {
-        exit(2);
-    }
-
-    // create and send the HTTP header
-    send_header(sockfd, hostname, port, path);
-
-    // get the response and save the file contents
-    process_response(sockfd);
-
-    close(sockfd);
-
-    return 0;
-}
-
-/**
- * Parse the input for the server hostname, port, and file path of the
- * requested download.  If no port is specified in the input, a default
- * value of 80 is chosen (standard HTTP port).  Similarly, if no file
- * path is given, a default value of "/index.html" is returned.
- * @param input string to be parsed
- * @param host  the hostname to connect to
- * @param port  the port to connect on
- * @param path  the path to download
- */
-void process_input(const char *input, char *host, char *port, char *path) {
-    char temp[strlen(input)];
-
-    // strip "http://" from argument if necessary
-    if (strncmp(input, "http://", 7) == 0)
-        strcpy(temp, input+7);
-    else
-        strcpy(temp, input);
-
-    // separate the hostname (and port) from the file path
-    // if no '/' is found (path was not specified), assume "/index.html"
-    char *pch;
-    pch = strchr(temp, '/');
-    if (pch != NULL) {
-        int len = pch - temp;
-        strncpy(host, temp, len);
-        strcpy(path, pch);
-    }
-    else {
-        strcpy(path, "/index.html");
-    }
-
-    // pull the port out of the hostname
-    // if no port was specified, assume port 80
-    pch = strchr(host, ':');
-    if (pch != NULL) {
-        int len = pch - host;
-        strcpy(port, pch+1);
-        host[len] = '\0';
-    }
-    else {
-        strcpy(port, "80");
-    }
-
-	printf("Downloading %s from %s:%s\n", path, host, port);
-}
-
-
-
-/**
- * Send a simple HTTP/1.0 GET request over the provided socket.
- * @param sockfd socket to send over
- * @param host      hostname of connected server
- * @param port      port of connected server
- * @param path      path of requested file
- */
-void send_header(int sockfd, const char *host, const char *port, const char *path) {
-    char header[1024];
-    printf("http_client: sending GET\n");
-
-    sprintf(header, "GET %s HTTP/1.0\r\n", path);
-    //send(sockfd, header, strlen(header), 0);
-    //sprintf(header, "Host: %s:%s\r\n", host, port);
-    //send(sockfd, header, strlen(header), 0);
-    //strcpy(header, "Connection: close\r\n");
-    //send(sockfd, header, strlen(header), 0);
-    //strcpy(header, "\r\n");
-    send(sockfd, header, strlen(header), 0);
-}
-
-/**
- * Save the response from the server as a file on the local machine. Do not
- * include the HTTP header of the response, only the actual file contents.
- * @param buffer the server's response
- */
 void process_response(int sockfd) {
     printf("[HTTP CLIENT]: reading response...\n");
 
@@ -291,4 +228,60 @@ void process_response(int sockfd) {
 	} while(!feof(f));
 
     fclose(f_out);
+}
+
+int main(int argc, char* argv[]) {
+    int sockfd;             // file descriptor for socket
+
+    char hostname[256];     // hostnames may be any string, lets assume they will be shorter than 512 characters
+    char port[6];           // ports may be 0-65535
+    char path[256];         // paths should be far shorter than 512 characters
+
+    // zero out the buffers to avoid garbage data
+    memset(hostname,0,256);
+    memset(port,0,6);
+    memset(path,0,256);
+
+    if (argc != 2) {
+        fprintf(stderr, "[USAGE]: ./http_client http://<host>:<port>/<path>\n");
+        exit(1);
+    }
+
+    // get the hostname, port number, and file path
+    process_input(argv[1], hostname, port, path);
+
+    // create a new socket connection to the server
+    if ((sockfd = connect_server(hostname, port)) == 0) {
+        exit(2);
+    }
+
+    // create and send the HTTP header
+    send_header(sockfd,hostname,port,path);
+
+    process_response(sockfd);
+
+    close(sockfd);
+
+    return 0;
+}
+
+/**
+ * Send a simple HTTP/1.0 GET request over the provided socket.
+ * @param sockfd socket to send over
+ * @param host      hostname of connected server
+ * @param port      port of connected server
+ * @param path      path of requested file
+ */
+void send_header(int sockfd, const char *host, const char *port, const char *path) {
+    char header[1024];
+    printf("http_client: sending GET\n");
+
+    sprintf(header, "GET %s HTTP/1.0\r\n", path);
+    //send(sockfd, header, strlen(header), 0);
+    //sprintf(header, "Host: %s:%s\r\n", host, port);
+    //send(sockfd, header, strlen(header), 0);
+    //strcpy(header, "Connection: close\r\n");
+    //send(sockfd, header, strlen(header), 0);
+    //strcpy(header, "\r\n");
+    send(sockfd, header, strlen(header), 0);
 }

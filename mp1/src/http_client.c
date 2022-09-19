@@ -249,49 +249,45 @@ void send_header(int sockfd, const char *host, const char *port, const char *pat
 void process_response(int sockfd) {
     printf("[HTTP CLIENT]: reading response...\n");
 
-    char buffer[4096];   	// buffer for received data
+    char buf[4096];   	// buffer for received data
 	char status[32];		// buffer for status code
 
 	// Extract the status code from the first line
 	// and discard the rest of the header
-	int n, i;
+    int read_obj = 0;
 
-	n = read_socket(sockfd, buffer, sizeof(buffer));
-	for (i = 0; i < n; i++) {
+	read_obj = read_socket(sockfd,buf,sizeof buf);
+	for (int i = 0; i < read_obj; i++) {
 		// copy everything after the first space, excluding the trailing \n
-		if (buffer[i] == ' ') {
-			strcpy(status, buffer+i+1);
+		if (buf[i] == ' ') {
+			strcpy(status, buf+i+1);
 			break;
 		}
 	}
 
-	while((n = read_socket(sockfd, buffer, sizeof(buffer))) != 0) {
-		if (strcmp(buffer, "\n") == 0)
+	while((read_obj = read_socket(sockfd,buf,sizeof buf)) != 0) {
+		if (strcmp(buf,"\n") == 0)
 			break;
     }
 
 	// if we got any status other than "200 OK" then something went wrong
 	if (strncmp(status, "200 OK", 6) != 0) {
-		fprintf(stderr, "[ERROR]: Unable to download the file %s\n", status);
+		fprintf(stderr, "[ERROR]: Unable to download the file %s\n",status);
 		return;
 	}
 
-	// read the socket as a file, echoing to the output
-	// file `sizeof(buffer)` bytes at a time.
 	FILE *f, *f_out = NULL;
 
-	f = fdopen(sockfd, "rb");
-	f_out = fopen("output", "wb");
+	f = fdopen(sockfd,"rb");
+	f_out = fopen("output","wb");
 	
     do {
-		n = fread(buffer, 1, sizeof(buffer),f);
-		if (n < sizeof(buffer)) {
-			if (!feof(f)){
-				fprintf(stderr, "An error occured while reading from the socket.\n");
-				break;
-			}
+		read_obj = fread(buf,1,sizeof buf,f);
+		if ((read_obj < sizeof buf) && !feof(f)) {
+		    fprintf(stderr, "An error occured while reading from the socket.\n");
+			break;
 		}
-		fwrite(buffer, 1, n, f_out);
+		fwrite(buf,1,read_obj,f_out);
 	} while(!feof(f));
 
     fclose(f_out);

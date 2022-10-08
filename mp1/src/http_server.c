@@ -241,8 +241,7 @@ void handle_client(int client) {
 	printf("[VERSION]: %s\n", version);
     
     // remove the beginning char '/'
-    // Reference: https://stackoverflow.com/questions/5457608/how-to-remove\
-                  -the-character-at-a-given-index-from-a-string-in-c
+    // Reference: https://stackoverflow.com/questions/5457608/how-to-remove-the-character-at-a-given-index-from-a-string-in-c
     memmove(&uri[URI_FIRST_CHAR_INDEX],&uri[URI_FIRST_CHAR_INDEX+1],
             strlen(uri)-URI_FIRST_CHAR_INDEX);
 

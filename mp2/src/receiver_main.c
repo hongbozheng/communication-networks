@@ -1,8 +1,12 @@
-/* 
- * File:   receiver_main.c
- * Author: 
+/**
+ * FILENAME: receiver_main.c
+ * 
+ * DESCRIPTION:
  *
- * Created on
+ * DATE: Saturday, Oct 8th, 2022
+ *
+ * AUTHOR:
+ *
  */
 
 #include <stdio.h>

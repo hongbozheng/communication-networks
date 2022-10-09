@@ -1,8 +1,12 @@
 /* 
- * File:   sender_main.c
- * Author: 
+ * FILENAME: sender_main.c
+ * 
+ * DESCRIPTION:
  *
- * Created on 
+ * DATE: Saturday, Oct 8th, 2022
+ *
+ * AUTHOR:
+ *
  */
 
 #include <stdio.h>

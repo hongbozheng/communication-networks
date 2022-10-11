@@ -19,6 +19,7 @@ fi
 
 if [ -f "$RELIABLE_RECEIVER" ]; then
     echo "[INFO]: Executing $RELIABLE_RECEIVER"
+    echo "--------------------------------------------------"
     ./$RELIABLE_RECEIVER $PORT $FILE
 else
     echo "[INFO]: Missing executable file $RELIABLE_RECEIVER"

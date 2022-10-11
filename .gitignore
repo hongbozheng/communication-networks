@@ -4,5 +4,7 @@ obj/
 !Makefile
 !*.h
 !*.c
+!*.cpp
+!*.bash
 !*.sh
 !*.txt

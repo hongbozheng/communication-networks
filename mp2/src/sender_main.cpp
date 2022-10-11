@@ -286,7 +286,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     fclose(fp);
 
     packet pkt;
-    while (true) {
+    while(1) {
         pkt.msg_type = FIN;
         pkt.data_size=0;
         memcpy(pkt_buffer, &pkt, sizeof(packet));
@@ -313,7 +313,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
 }
 
-/*
+/**
  * 
  */
 int main(int argc, char** argv) {

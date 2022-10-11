@@ -189,7 +189,7 @@ void congestionControl(bool newACK, bool timeout) {
 }
 
 void fin_ack(int sockfd) {
-    packet pkt, ack;
+    packet pkt;
     int num_byte;
     
     while(1) {
@@ -206,8 +206,8 @@ void fin_ack(int sockfd) {
             exit(2);
         }
 
-        memcpy(&ack, pkt_buffer, sizeof(packet));
-        if (ack.msg_type == FIN_ACK) {
+        memcpy(&pkt, pkt_buffer, sizeof(packet));
+        if (pkt.msg_type == FIN_ACK) {
             printf("[INFO]: Receive FIN_ACK\n");
             break;
         }
@@ -309,35 +309,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     }
     fclose(fp);
     
-    /*
-    packet pkt;
-    while(1) {
-        pkt.data_size=0;
-        pkt.msg_type = FIN;
-
-        memcpy(pkt_buffer, &pkt, sizeof(packet));
-        if((numbytes = sendto(sockfd, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            printf("[ERROR]: Failed to send FIN to receiver\n");
-            exit(2);
-        }
-        packet ack;
-        if ((numbytes = recvfrom(sockfd, pkt_buffer, sizeof(packet), 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
-            printf("[ERROR]: Failed to receive ACK from receiver\n");
-            exit(2);
-        }
-        memcpy(&ack, pkt_buffer, sizeof(packet));
-        if (ack.msg_type == FIN_ACK) {
-            printf("[INFO]: Receive the FIN_ACK\n");
-            break;
-        }
-    }*/
-
     fin_ack(sockfd);
 
     printf("[INFO]: Closing the socket\n");
     close(s);
     return;
-
 }
 
 /**

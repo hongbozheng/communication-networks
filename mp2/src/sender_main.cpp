@@ -51,31 +51,46 @@ int get_socket(char *hostname, unsigned short int hostUDPport) {
     return sockfd;
 }
 
-void open_file(char* filename, unsigned long long int bytesToTransfer) {
-    fp = fopen(filename, "rb");
-    if (fp == NULL) {
-        printf("[ERROR]: Could not open file %s\n", filename);
-        exit(1);
+int fillBuffer(int pkt_number, FILE *fp) {
+    if (pkt_number == 0) return 0;
+    int byte_of_pkt;
+    char data_buffer[MSS];
+    int count = 0;
+    for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
+        packet pkt;
+        if (bytesToRead < MSS) {
+            byte_of_pkt = bytesToRead;
+        } else {
+            byte_of_pkt = MSS;
+        }
+        int file_size = fread(data_buffer, sizeof(char), byte_of_pkt, fp);
+        if (file_size > 0) {
+            pkt.data_size = file_size;
+            pkt.msg_type = DATA;
+            pkt.seq_num = seq_number;
+            memcpy(pkt.data, &data_buffer,sizeof(char)*byte_of_pkt);
+            buffer.push(pkt);
+            seq_number = (seq_number + 1) % MAX_SEQ_NUMBER;
+        }
+        bytesToRead -= file_size;
+        count = i;
     }
-    bytesToRead = bytesToTransfer;
-
-    num_pkt_total = (unsigned long long int) ceil(bytesToRead * 1.0 / MSS);
-    printf("[INFO]: %lld packet(s) need to be sent\n", num_pkt_total);
+    return count;
 }
 
 void set_socket_timeout(int socket){
     // Reference: https://manpages.ubuntu.com/manpages/impish/man3/timeval.3bsd.html
-    struct timeval RTT_TIMEOUT;
-    RTT_TIMEOUT.tv_sec = 0;
-    RTT_TIMEOUT.tv_usec = 2*RTT;
+    struct timeval TIMEOUT;
+    TIMEOUT.tv_sec = 0;
+    TIMEOUT.tv_usec = 2*RTT;
     // Reference: https://pubs.opengroup.org/onlinepubs/000095399/functions/setsockopt.html
-    if (setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &RTT_TIMEOUT, sizeof(RTT_TIMEOUT)) == -1) {
+    if (setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &TIMEOUT, sizeof(TIMEOUT)) == -1) {
         fprintf(stderr, "Failed to set socket timeout\n");
         return;
     }
 }
 
-void sendPkts(int socket) {
+void sendPkts(int socket, FILE *fp) {
 
     int pkts_to_send =(cwnd - wait_ack.size()) <= buffer.size() ? cwnd - wait_ack.size() : buffer.size();
     if (cwnd - wait_ack.size() < 1) {
@@ -107,35 +122,9 @@ void sendPkts(int socket) {
         wait_ack.push(buffer.front());
         buffer.pop();
     }
-    fillBuffer(pkts_to_send);
+    fillBuffer(pkts_to_send, fp);
 }
 
-int fillBuffer(int pkt_number) {
-    if (pkt_number == 0) return 0;
-    int byte_of_pkt;
-    char data_buffer[MSS];
-    int count = 0;
-    for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
-        packet pkt;
-        if (bytesToRead < MSS) {
-            byte_of_pkt = bytesToRead;
-        } else {
-            byte_of_pkt = MSS;
-        }
-        int file_size = fread(data_buffer, sizeof(char), byte_of_pkt, fp);
-        if (file_size > 0) {
-            pkt.data_size = file_size;
-            pkt.msg_type = DATA;
-            pkt.seq_num = seq_number;
-            memcpy(pkt.data, &data_buffer,sizeof(char)*byte_of_pkt);
-            buffer.push(pkt);
-            seq_number = (seq_number + 1) % MAX_SEQ_NUMBER;
-        }
-        bytesToRead -= file_size;
-        count = i;
-    }
-    return count;
-}
 
 void congestionControl(bool newACK, bool timeout) {
     switch (congetion_ctrl_state) {
@@ -227,12 +216,21 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
 	/* Send data and receive acknowledgements on s*/
     
+    bytesToRead = bytesToTransfer;
     int sockfd = get_socket(hostname, hostUDPport);
-    open_file(filename, bytesToTransfer);
+    //open_file(filename);
 
-    fillBuffer(BUFFER_SIZE);
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        printf("[ERROR]: Could not open file %s\n", filename);
+        exit(1);
+    }
+    unsigned long long int total_pkt = (unsigned long long int) ceil((float)bytesToTransfer / MSS);
+    printf("[INFO]: %lld packet(s) need to be sent\n", total_pkt);
+
+    fillBuffer(BUFFER_SIZE, fp);
     set_socket_timeout(sockfd);
-    sendPkts(sockfd);
+    sendPkts(sockfd, fp);
     while (!buffer.empty() || !wait_ack.empty()) {
         if((numbytes = recvfrom(sockfd, pkt_buffer, sizeof(packet), 0, NULL, NULL)) == -1) {
             if (errno != EAGAIN || errno != EWOULDBLOCK) {
@@ -278,7 +276,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                         congestionControl(true, false);
                         wait_ack.pop();
                     }
-                    sendPkts(sockfd);
+                    sendPkts(sockfd, fp);
                 }
             }
         }
@@ -307,7 +305,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
     }
 
-    printf("Closing the socket\n");
+    printf("[INFO]: Closing the socket\n");
     close(s);
     return;
 

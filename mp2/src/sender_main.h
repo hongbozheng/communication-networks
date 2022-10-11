@@ -50,8 +50,7 @@ typedef struct{
     char    data[MSS];
 } packet;
 
-FILE* fp;       // file to send
-unsigned long long int num_pkt_total, bytesToRead;
+unsigned long long int bytesToRead;
 //int file_point = 0;
 
 // socket relevant

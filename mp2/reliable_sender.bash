@@ -1,7 +1,7 @@
 RELIABLE_SENDER=reliable_sender
 RECEIVER_HOSTNAME=localhost
 PORT=8080
-FILENAME=trash.txt
+FILENAME=send.txt
 
 if [ "$1" = "" ]; then
     echo "[USAGE]: ./sender.bash <byte_to_xfer>"

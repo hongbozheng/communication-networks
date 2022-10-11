@@ -3,18 +3,18 @@ RELIABLE_RECEIVER=reliable_receiver
 PORT=8080
 
 if [ -f "$FILE" ]; then
-    echo "[INFO]: File $FILE already exists"
-    echo "[INFO]: Removing file $FILE"
+    echo "[INFO]: Destination file $FILE already exists"
+    echo "[INFO]: Removing destination file $FILE"
     rm $FILE
-    echo "[INFO]: File $FILE removed"
-    echo "[INFO]: Creating new file $FILE"
+    echo "[INFO]: Destination file $FILE removed"
+    echo "[INFO]: Creating new destination file $FILE"
     touch $FILE
-    echo "[INFO]: $FILE created"
+    echo "[INFO]: Destination file $FILE created"
 else
-    echo "[INFO]: Missing file $FILE"
-    echo "[INFO]: Creating file $FILE"
+    echo "[INFO]: Missing destination file $FILE"
+    echo "[INFO]: Creating destination file $FILE"
     touch $FILE
-    echo "[INFO]: $FILE created"
+    echo "[INFO]: Destination file $FILE created"
 fi
 
 if [ -f "$RELIABLE_RECEIVER" ]; then

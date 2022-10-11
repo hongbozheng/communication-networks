@@ -188,6 +188,32 @@ void congestionControl(bool newACK, bool timeout) {
     }
 }
 
+void fin_ack(int sockfd) {
+    packet pkt, ack;
+    int num_byte;
+    
+    while(1) {
+        pkt.data_size=0;
+        pkt.msg_type = FIN;
+        memcpy(pkt_buffer, &pkt, sizeof(packet));
+
+        if((num_byte = sendto(sockfd, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1){
+            printf("[ERROR]: Failed to send FIN to receiver\n");
+            exit(2);
+        }
+        if ((num_byte = recvfrom(sockfd, pkt_buffer, sizeof(packet), 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
+            printf("[ERROR]: Failed to receive ACK from receiver\n");
+            exit(2);
+        }
+
+        memcpy(&ack, pkt_buffer, sizeof(packet));
+        if (ack.msg_type == FIN_ACK) {
+            printf("[INFO]: Receive FIN_ACK\n");
+            break;
+        }
+    }
+}
+
 void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* filename, unsigned long long int bytesToTransfer) {
     /*
     //Open the file
@@ -282,28 +308,31 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
     }
     fclose(fp);
-
+    
+    /*
     packet pkt;
     while(1) {
-        pkt.msg_type = FIN;
         pkt.data_size=0;
+        pkt.msg_type = FIN;
+
         memcpy(pkt_buffer, &pkt, sizeof(packet));
         if((numbytes = sendto(sockfd, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            perror("can not send FIN to sender");
+            printf("[ERROR]: Failed to send FIN to receiver\n");
             exit(2);
         }
         packet ack;
         if ((numbytes = recvfrom(sockfd, pkt_buffer, sizeof(packet), 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
-            perror("can not receive from sender");
+            printf("[ERROR]: Failed to receive ACK from receiver\n");
             exit(2);
         }
         memcpy(&ack, pkt_buffer, sizeof(packet));
         if (ack.msg_type == FIN_ACK) {
             printf("[INFO]: Receive the FIN_ACK\n");
-            // cout << "Receive the FIN_ACK." << endl;
             break;
         }
-    }
+    }*/
+
+    fin_ack(sockfd);
 
     printf("[INFO]: Closing the socket\n");
     close(s);

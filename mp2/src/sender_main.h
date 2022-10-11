@@ -54,7 +54,7 @@ unsigned long long int bytesToRead;
 //int file_point = 0;
 
 // socket
-// I don't think we need to store the receiver's address info
+// I don't think we need the receiver's address info, use NULL instead
 //struct sockaddr_storage recv_addr; // connector's address information
 //socklen_t addr_len = sizeof recv_addr;
 struct addrinfo hints, *recvinfo, *p;

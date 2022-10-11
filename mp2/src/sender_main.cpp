@@ -54,25 +54,28 @@ int get_socket(char *hostname, unsigned short int hostUDPport) {
 int fillBuffer(int pkt_number, FILE *fp) {
     if (pkt_number == 0) return 0;
     int byte_of_pkt;
-    char data_buffer[MSS];
+    char buf[MSS];
     int count = 0;
+
     for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
         packet pkt;
-        if (bytesToRead < MSS) {
-            byte_of_pkt = bytesToRead;
-        } else {
+        if (bytesToRead >= MSS) {
             byte_of_pkt = MSS;
+        } else {
+            byte_of_pkt = bytesToRead;
         }
-        int file_size = fread(data_buffer, sizeof(char), byte_of_pkt, fp);
-        if (file_size > 0) {
-            pkt.data_size = file_size;
+        int byte_read = fread(buf, sizeof(char), byte_of_pkt, fp);
+        if (byte_read == byte_of_pkt) {
+            pkt.data_size = byte_read;
             pkt.msg_type = DATA;
             pkt.seq_num = seq_number;
-            memcpy(pkt.data, &data_buffer,sizeof(char)*byte_of_pkt);
+            memcpy(pkt.data, &buf, sizeof(char)*byte_of_pkt);
             buffer.push(pkt);
             seq_number = (seq_number + 1) % MAX_SEQ_NUMBER;
+        } else {
+            printf("[ERROR]: Read file error\n");
         }
-        bytesToRead -= file_size;
+        bytesToRead -= byte_read;
         count = i;
     }
     return count;
@@ -189,7 +192,8 @@ void fin_ack(int sockfd) {
     int num_byte;
     
     while(1) {
-        pkt.data_size=0;
+        pkt.data_size = 0;
+        pkt.seq_num = seq_number;
         pkt.msg_type = FIN;
         memcpy(pkt_buf, &pkt, sizeof(packet));
 

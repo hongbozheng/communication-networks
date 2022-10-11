@@ -94,31 +94,27 @@ void sendPkts(int socket, FILE *fp) {
 
     int pkts_to_send =(cwnd - wait_ack.size()) <= buffer.size() ? cwnd - wait_ack.size() : buffer.size();
     if (cwnd - wait_ack.size() < 1) {
-        memcpy(pkt_buffer, &wait_ack.front(), sizeof(packet));
-        if((numbytes = sendto(socket, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            perror("Error: data sending");
-            printf("[ERROR]: Fail to send %d pkt\n", wait_ack.front().seq_num);
+        memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
+        if((numbytes = sendto(socket, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
+            printf("[ERROR]: Fail to send packet %d\n", wait_ack.front().seq_num);
             exit(2);
         }
         printf("[INFO]: Sent packet %d, cwnd = %f\n", wait_ack.front().seq_num, cwnd);
-        // cout << "Sent pkt "<< wait_ack.front().seq_num << " cwnd = "<< cwnd << endl;
         return;
     }
     if (buffer.empty()) {
         printf("[INFO]: No packet to send\n");
-        // cout << "no packet to send" << endl;
         return;
     }
 
     for (int i = 0; i < pkts_to_send; ++i) {
-        memcpy(pkt_buffer, &buffer.front(), sizeof(packet));
-        if((numbytes = sendto(socket, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
+        memcpy(pkt_buf, &buffer.front(), sizeof(packet));
+        if((numbytes = sendto(socket, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
             perror("Error: data sending");
             printf("[ERROR]: Fail to send %d pkt\n", buffer.front().seq_num);
             exit(2);
         }
         printf("[INFO]: Send packet %d, cwnd = %f\n", buffer.front().seq_num, cwnd);
-        // cout << "Sent pkt "<< buffer.front().seq_num << " cwnd = "<< cwnd << endl;
         wait_ack.push(buffer.front());
         buffer.pop();
     }
@@ -195,18 +191,20 @@ void fin_ack(int sockfd) {
     while(1) {
         pkt.data_size=0;
         pkt.msg_type = FIN;
-        memcpy(pkt_buffer, &pkt, sizeof(packet));
+        memcpy(pkt_buf, &pkt, sizeof(packet));
 
-        if((num_byte = sendto(sockfd, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1){
+        if((num_byte = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1){
             printf("[ERROR]: Failed to send FIN to receiver\n");
             exit(2);
         }
-        if ((num_byte = recvfrom(sockfd, pkt_buffer, sizeof(packet), 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
+        // I don't think we need the receiver's address info, use NULL instead
+        // if ((num_byte = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, (struct sockaddr *) &recv_addr, &addr_len)) == -1) {
+        if ((num_byte = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, NULL, NULL)) == -1) {
             printf("[ERROR]: Failed to receive ACK from receiver\n");
             exit(2);
         }
 
-        memcpy(&pkt, pkt_buffer, sizeof(packet));
+        memcpy(&pkt, pkt_buf, sizeof(packet));
         if (pkt.msg_type == FIN_ACK) {
             printf("[INFO]: Receive FIN_ACK\n");
             break;
@@ -244,7 +242,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     
     bytesToRead = bytesToTransfer;
     int sockfd = get_socket(hostname, hostUDPport);
-    //open_file(filename);
 
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL) {
@@ -258,15 +255,15 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     set_socket_timeout(sockfd);
     sendPkts(sockfd, fp);
     while (!buffer.empty() || !wait_ack.empty()) {
-        if((numbytes = recvfrom(sockfd, pkt_buffer, sizeof(packet), 0, NULL, NULL)) == -1) {
+        if((numbytes = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, NULL, NULL)) == -1) {
             if (errno != EAGAIN || errno != EWOULDBLOCK) {
                 perror("can not receive main ack");
                 exit(2);
             }
             printf("[INFO]: Time out, resend packet %d\n", wait_ack.front().seq_num);
             // cout << "Time out, resend pkt " << wait_ack.front().seq_num << endl;
-            memcpy(pkt_buffer, &wait_ack.front(), sizeof(packet));
-            if((numbytes = sendto(sockfd, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
+            memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
+            if((numbytes = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
                 perror("Error: data sending");
                 printf("[ERROR]: Fail to send packet %d\n", wait_ack.front().seq_num);
                 exit(2);
@@ -274,7 +271,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             congestionControl(false, true);
         } else {
             packet pkt;
-            memcpy(&pkt, pkt_buffer, sizeof(packet));
+            memcpy(&pkt, pkt_buf, sizeof(packet));
             if (pkt.msg_type == ACK) {
                 printf("[INFO]: Receive ACK %d\n", pkt.ack_num);
                 // cout << "receive ack" << pkt.ack_num << endl;
@@ -288,8 +285,8 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                         printf("[INFO]: 3 duplicate tp FAST_RECOVERY, cwnd = %f\n",cwnd);
                         // cout << "3 duplicate tp FAST_RECOVERY, cwnd = " << cwnd <<endl;
                         // resend duplicated pkt
-                        memcpy(pkt_buffer, &wait_ack.front(), sizeof(packet));
-                        if((numbytes = sendto(sockfd, pkt_buffer, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
+                        memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
+                        if((numbytes = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
                             perror("Error: data sending");
                             printf("Fail to send %d pkt", wait_ack.front().seq_num);
                             exit(2);

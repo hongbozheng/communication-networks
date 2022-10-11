@@ -41,7 +41,7 @@
 #define MAX_SEQ_NUMBER 100000
 #define RTT 20*1000
 
-//packet structure used for transfering
+// packet for data transfer
 typedef struct{
     int 	data_size;
     int 	seq_num;
@@ -53,9 +53,10 @@ typedef struct{
 unsigned long long int bytesToRead;
 //int file_point = 0;
 
-// socket relevant
-struct sockaddr_storage their_addr; // connector's address information
-socklen_t addr_len = sizeof their_addr;
+// socket
+// I don't think we need to store the receiver's address info
+//struct sockaddr_storage recv_addr; // connector's address information
+//socklen_t addr_len = sizeof recv_addr;
 struct addrinfo hints, *recvinfo, *p;
 int numbytes;
 
@@ -67,7 +68,7 @@ int congetion_ctrl_state = SLOW_START;
 
 // slide window
 unsigned long long int seq_number;
-char pkt_buffer[sizeof(packet)];
+char pkt_buf[sizeof(packet)];
 std::queue<packet> buffer;
 std::queue<packet> wait_ack;
 

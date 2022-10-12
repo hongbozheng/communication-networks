@@ -47,7 +47,6 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         data_size[i]=DATA_SIZE;
     }
 
-    addrlen = sizeof sender_addr;
     int idx = 0;
     
     packet pkt;
@@ -103,12 +102,6 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
             default:
                 break;
         }
-        /*
-        if (pkt.msg_type == DATA){
-        
-        } else if(pkt.msg_type == FIN){
-            
-        }*/
     }
 
 finish:

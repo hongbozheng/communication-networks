@@ -39,8 +39,8 @@ typedef struct {
     char data[DATA_SIZE];
 } packet;
 
-socklen_t addrlen;
 struct sockaddr_in si_me, si_other, sender_addr;
+socklen_t addrlen = sizeof sender_addr;
 int s, slen, recv_byte;
 
 char buf[sizeof(packet)];

@@ -51,7 +51,7 @@ typedef struct{
 }packet;
 
 FILE* fp;
-unsigned long long int bytesToRead;
+unsigned long long int byte_to_xfer;
 
 // socket
 struct addrinfo hints, *recvinfo, *p;

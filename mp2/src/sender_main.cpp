@@ -60,12 +60,12 @@ void create_pkt_queue(int pkt_number, FILE *fp) {
     int pkt_data_byte;
     char buf[MSS];
     
-    for (int i = 0; bytesToRead != 0 && i < pkt_number; ++i) {
+    for (int i = 0; byte_to_xfer!= 0 && i < pkt_number; ++i) {
         packet pkt;
-        if (bytesToRead >= MSS) {
+        if(byte_to_xfer >= MSS) {
             pkt_data_byte = MSS;
         } else {
-            pkt_data_byte = bytesToRead;
+            pkt_data_byte = byte_to_xfer;
         }
 
         int byte_read = fread(buf, sizeof(char), pkt_data_byte, fp);
@@ -79,7 +79,7 @@ void create_pkt_queue(int pkt_number, FILE *fp) {
         } else {
             printf("[INFO]: Reach EOF, fread 0 byte\n");
         }
-        bytesToRead -= byte_read;
+        byte_to_xfer -= byte_read;
     }
 }
 
@@ -231,13 +231,13 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     set_socket_timeout(sockfd);
     
     FILE *fp = fopen(filename, "rb");
-    if (fp == NULL) {
+    if(fp == NULL) {
         printf("Could not open file to send.");
         exit(1);
     }
-    bytesToRead = bytesToTransfer;
+    byte_to_xfer = bytesToTransfer;
 
-    unsigned long long int pkt_total = (unsigned long long int) ceil((float)bytesToRead / MSS);
+    unsigned long long int pkt_total = (unsigned long long int) ceil((float)byte_to_xfer/ MSS);
     printf("[INFO]: %llu packet(s) need to be sent\n", pkt_total);
 
     create_pkt_queue(BUFFER_SIZE, fp);
@@ -248,7 +248,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
     int byte_num;
 
-    while (!pkt_queue.empty() || !ack_queue.empty()) {
+    while(!pkt_queue.empty() || !ack_queue.empty()) {
         if((byte_num = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, NULL, NULL)) == -1) {
             if (errno != EAGAIN || errno != EWOULDBLOCK) {
                 printf("[INFO]: Fail to receive main ACK\n");
@@ -267,9 +267,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             if (pkt.msg_type == ACK) {
                 printf("[INFO]: Receive ACK from receiver\n");
                 printf("        Receiver receives packet %d successfully\n", pkt.ack_num);
-                if (pkt.ack_num == ack_queue.front().seq_num) {
+                if(pkt.ack_num == ack_queue.front().seq_num) {
                     state_ctrl(false, false);
-                    if (dup_ack_cnt == 3) {
+                    if(dup_ack_cnt == 3) {
                         ssthread = cwnd/2.0;
                         cwnd = ssthread + 3;
                         dup_ack_cnt = 0;

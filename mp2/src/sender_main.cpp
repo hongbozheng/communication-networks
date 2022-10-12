@@ -115,8 +115,8 @@ int send_pkt(int sockfd) {
     return send_pkt_num;
 }
 
-void state_ctrl(bool newACK, bool timeout) {
-    switch (ctrl_state) {
+void state_ctrl(bool new_ack, bool timeout) {
+    switch (state) {
         case SLOW_START:
             if (timeout) {
                 ssthread = cwnd/2.0;
@@ -124,7 +124,7 @@ void state_ctrl(bool newACK, bool timeout) {
                 dup_ack_cnt = 0;
                 break;
             }
-            if (newACK) {
+            if (new_ack) {
                 dup_ack_cnt = 0;
                 cwnd = (cwnd+1 >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+1;
             } else {
@@ -132,7 +132,7 @@ void state_ctrl(bool newACK, bool timeout) {
             }
             if (cwnd >= ssthread) {
                 printf("[INFO]: SLOW_START ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
-                ctrl_state = CONGESTION_AVOIDANCE;
+                state = CONGESTION_AVOIDANCE;
             }
             break;
         case CONGESTION_AVOIDANCE:
@@ -141,10 +141,10 @@ void state_ctrl(bool newACK, bool timeout) {
                 cwnd = 1;
                 dup_ack_cnt= 0;
                 printf("[INFO]: CONGESTION_AVOIDANCE ---> SLOW_START, cwnd = %f\n", cwnd);
-                ctrl_state = SLOW_START;
+                state = SLOW_START;
                 break;
             }
-            if (newACK) {
+            if (new_ack) {
                 cwnd = (cwnd+ 1.0/cwnd >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+ 1.0/cwnd;
                 dup_ack_cnt = 0;
             } else {
@@ -157,14 +157,14 @@ void state_ctrl(bool newACK, bool timeout) {
                 cwnd = 1;
                 dup_ack_cnt = 0;
                 printf("[INFO]: FAST_RECOVERY ---> SLOW_START, cwnd = %f\n", cwnd);
-                ctrl_state = SLOW_START;
+                state = SLOW_START;
                 break;
             }
-            if (newACK) {
+            if (new_ack) {
                 cwnd = ssthread;
                 dup_ack_cnt = 0;
                 printf("[INFO]: FAST_RECOVERY ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
-                ctrl_state = CONGESTION_AVOIDANCE;
+                state = CONGESTION_AVOIDANCE;
             } else {
                 cwnd = (cwnd+1 >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+1;
             }
@@ -273,7 +273,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                         ssthread = cwnd/2.0;
                         cwnd = ssthread + 3;
                         dup_ack_cnt = 0;
-                        ctrl_state = FAST_RECOVERY;
+                        state = FAST_RECOVERY;
                         printf("[INFO]: Receive 3 duplicate ACK ---> FAST_RECOVERY, cwnd = %f\n", cwnd);
                         memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
                         if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1) {

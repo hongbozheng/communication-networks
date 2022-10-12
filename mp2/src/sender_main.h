@@ -60,7 +60,7 @@ struct addrinfo hints, *recvinfo, *p;
 double cwnd = 1.0;
 int ssthread = 64, dup_ack_cnt = 0;
 enum socket_state {SLOW_START, CONGESTION_AVOIDANCE, FAST_RECOVERY, FIN_WAIT};
-int ctrl_state = SLOW_START;
+int state = SLOW_START;
 
 // slide window
 unsigned long long int seq_number;
@@ -71,10 +71,11 @@ std::queue<packet> wait_ack;
 
 int getSocket(char *hostname, unsigned short int hostUDPport);
 void openFile(char* filename, unsigned long long int bytesToTransfer);
-void state_ctrl(bool newACK, bool timeout);
+void state_ctrl(bool new_ack, bool timeout);
 void create_pkt_queue(int pkt_number, FILE *fp);
 int send_pkt(int socket);
 void setSockTimeout(int socket);
+void fin_ack(int sockfd);
 
 struct sockaddr_in si_other;
 int s, slen;

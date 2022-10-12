@@ -87,10 +87,11 @@ void create_pkt_queue(int pkt_number, FILE *fp) {
 }
 
 void send_pkt(int sockfd, FILE *fp) {
+    int byte_send;
     int pkts_to_send = (cwnd - wait_ack.size()) <= pkt_queue.size() ? cwnd - wait_ack.size() : pkt_queue.size();
     if (cwnd - wait_ack.size() < 1) {
         memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
-        if((numbytes = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
+        if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
             printf("Fail to send %d pkt\n", wait_ack.front().seq_num);
             exit(2);
         }
@@ -102,7 +103,6 @@ void send_pkt(int sockfd, FILE *fp) {
         return;
     }
 
-    int byte_send;
     for (int i = 0; i < pkts_to_send; ++i) {
         memcpy(pkt_buf, &pkt_queue.front(), sizeof(packet));
         if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1){

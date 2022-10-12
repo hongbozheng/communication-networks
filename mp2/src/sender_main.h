@@ -66,7 +66,7 @@ int state = SLOW_START;
 unsigned long long int seq_number;
 char pkt_buf[sizeof(packet)];
 std::queue<packet> pkt_queue;
-std::queue<packet> wait_ack;
+std::queue<packet> ack_queue;
 
 
 int getSocket(char *hostname, unsigned short int hostUDPport);

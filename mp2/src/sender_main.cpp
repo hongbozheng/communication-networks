@@ -89,16 +89,16 @@ int send_pkt(int sockfd) {
         return 0;
     }
     
-    int send_pkt_num  = (cwnd - wait_ack.size()) <= pkt_queue.size() ? cwnd - wait_ack.size() : pkt_queue.size();
+    int send_pkt_num  = (cwnd - ack_queue.size()) <= pkt_queue.size() ? cwnd - ack_queue.size() : pkt_queue.size();
     int byte_send;
     
-    if(cwnd - wait_ack.size() < 1) {
-        memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
+    if(cwnd - ack_queue.size() < 1) {
+        memcpy(pkt_buf, &ack_queue.front(), sizeof(packet));
         if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            printf("Fail to send %d pkt\n", wait_ack.front().seq_num);
+            printf("Fail to send %d pkt\n", ack_queue.front().seq_num);
             exit(2);
         }
-        printf("[INFO]: Send packet %d, cwnd = %f\n", wait_ack.front().seq_num, cwnd);
+        printf("[INFO]: Send packet %d, cwnd = %f\n", ack_queue.front().seq_num, cwnd);
         return 0;
     }
 
@@ -109,7 +109,7 @@ int send_pkt(int sockfd) {
             exit(2);
         }
         printf("[INFO]: Sent packet %d successfully, cwnd = %f\n", pkt_queue.front().seq_num, cwnd);
-        wait_ack.push(pkt_queue.front());
+        ack_queue.push(pkt_queue.front());
         pkt_queue.pop();
     }
     return send_pkt_num;
@@ -248,16 +248,16 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
     int byte_num;
 
-    while (!pkt_queue.empty() || !wait_ack.empty()) {
+    while (!pkt_queue.empty() || !ack_queue.empty()) {
         if((byte_num = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, NULL, NULL)) == -1) {
             if (errno != EAGAIN || errno != EWOULDBLOCK) {
                 printf("[INFO]: Fail to receive main ACK\n");
                 exit(2);
             }
-            printf("[INFO]: Timeout, resend packet %d\n", wait_ack.front().seq_num);
-            memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
+            printf("[INFO]: Timeout, resend packet %d\n", ack_queue.front().seq_num);
+            memcpy(pkt_buf, &ack_queue.front(), sizeof(packet));
             if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1) {
-                printf("Fail to send %d pkt\n", wait_ack.front().seq_num);
+                printf("Fail to send %d pkt\n", ack_queue.front().seq_num);
                 exit(2);
             }
             state_ctrl(false, true);
@@ -267,7 +267,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             if (pkt.msg_type == ACK) {
                 printf("[INFO]: Receive ACK from receiver\n");
                 printf("        Receiver receives packet %d successfully\n", pkt.ack_num);
-                if (pkt.ack_num == wait_ack.front().seq_num) {
+                if (pkt.ack_num == ack_queue.front().seq_num) {
                     state_ctrl(false, false);
                     if (dup_ack_cnt == 3) {
                         ssthread = cwnd/2.0;
@@ -275,17 +275,17 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                         dup_ack_cnt = 0;
                         state = FAST_RECOVERY;
                         printf("[INFO]: Receive 3 duplicate ACK ---> FAST_RECOVERY, cwnd = %f\n", cwnd);
-                        memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
+                        memcpy(pkt_buf, &ack_queue.front(), sizeof(packet));
                         if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1) {
-                            printf("Fail to resend packet %d\n", wait_ack.front().seq_num);
+                            printf("Fail to resend packet %d\n", ack_queue.front().seq_num);
                             exit(2);
                         }
-                        printf("[INFO]: Receive 3 duplicate ACK, resend packet %d\n", wait_ack.front().seq_num);
+                        printf("[INFO]: Receive 3 duplicate ACK, resend packet %d\n", ack_queue.front().seq_num);
                     }
-                } else if (pkt.ack_num > wait_ack.front().seq_num) {
-                    while (!wait_ack.empty() && wait_ack.front().seq_num < pkt.ack_num) {
+                } else if(pkt.ack_num > ack_queue.front().seq_num) {
+                    while(!ack_queue.empty() && ack_queue.front().seq_num < pkt.ack_num) {
                         state_ctrl(true, false);
-                        wait_ack.pop();
+                        ack_queue.pop();
                     }
                     send_pkt_num = send_pkt(sockfd);
                     create_pkt_queue(send_pkt_num, fp);

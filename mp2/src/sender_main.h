@@ -62,7 +62,7 @@ int numbytes;
 
 // Congestion Control
 double cwnd = 1.0;
-int ssthread = 64, dupAckCount = 0;
+int ssthread = 64, dup_ack_cnt = 0;
 enum socket_state {SLOW_START, CONGESTION_AVOIDANCE, FAST_RECOVERY, FIN_WAIT};
 int ctrl_state = SLOW_START;
 
@@ -75,9 +75,9 @@ std::queue<packet> wait_ack;
 
 int getSocket(char *hostname, unsigned short int hostUDPport);
 void openFile(char* filename, unsigned long long int bytesToTransfer);
-void congestionControl(bool newACK, bool timeout);
+void state_ctrl(bool newACK, bool timeout);
 void create_pkt_queue(int pkt_number, FILE *fp);
-void send_pkt(int socket, FILE *fp);
+int send_pkt(int socket);
 void setSockTimeout(int socket);
 
 struct sockaddr_in si_other;

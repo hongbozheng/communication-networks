@@ -86,13 +86,13 @@ void create_pkt_queue(int pkt_number, FILE *fp) {
     }
 }
 
-void send_pkt(int sockfd, FILE *fp) {
+int send_pkt(int sockfd) {
     if(pkt_queue.empty()) {
         printf("[INFO]: No packet(s) need to be sent\n");
-        return;
+        return 0;
     }
     
-    int pkts_to_send = (cwnd - wait_ack.size()) <= pkt_queue.size() ? cwnd - wait_ack.size() : pkt_queue.size();
+    int send_pkt_num  = (cwnd - wait_ack.size()) <= pkt_queue.size() ? cwnd - wait_ack.size() : pkt_queue.size();
     int byte_send;
     
     if(cwnd - wait_ack.size() < 1) {
@@ -102,10 +102,10 @@ void send_pkt(int sockfd, FILE *fp) {
             exit(2);
         }
         printf("[INFO]: Send packet %d, cwnd = %f\n", wait_ack.front().seq_num, cwnd);
-        return;
+        return 0;
     }
 
-    for(int i = 0; i < pkts_to_send; ++i) {
+    for(int i = 0; i < send_pkt_num; ++i) {
         memcpy(pkt_buf, &pkt_queue.front(), sizeof(packet));
         if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1){
             printf("Fail to send packet %d\n", pkt_queue.front().seq_num);
@@ -115,23 +115,24 @@ void send_pkt(int sockfd, FILE *fp) {
         wait_ack.push(pkt_queue.front());
         pkt_queue.pop();
     }
-    create_pkt_queue(pkts_to_send, fp);
+    //create_pkt_queue(pkts_to_send, fp);
+    return send_pkt_num;
 }
 
-void congestionControl(bool newACK, bool timeout) {
+void state_ctrl(bool newACK, bool timeout) {
     switch (ctrl_state) {
         case SLOW_START:
             if (timeout) {
                 ssthread = cwnd/2.0;
                 cwnd = 1;
-                dupAckCount = 0;
-                return;
+                dup_ack_cnt = 0;
+                break;
             }
             if (newACK) {
-                dupAckCount = 0;
+                dup_ack_cnt = 0;
                 cwnd = (cwnd+1 >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+1;
             } else {
-                dupAckCount++;
+                ++dup_ack_cnt;
             }
             if (cwnd >= ssthread) {
                 printf("[INFO]: SLOW_START ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
@@ -142,30 +143,30 @@ void congestionControl(bool newACK, bool timeout) {
             if (timeout) {
                 ssthread = cwnd/2.0;
                 cwnd = 1;
-                dupAckCount = 0;
+                dup_ack_cnt= 0;
                 printf("[INFO]: CONGESTION_AVOIDANCE ---> SLOW_START, cwnd = %f\n", cwnd);
                 ctrl_state = SLOW_START;
-                return;
+                break;
             }
             if (newACK) {
                 cwnd = (cwnd+ 1.0/cwnd >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+ 1.0/cwnd;
-                dupAckCount = 0;
+                dup_ack_cnt = 0;
             } else {
-                dupAckCount++;
+                ++dup_ack_cnt;
             }
             break;
         case FAST_RECOVERY:
             if (timeout) {
                 ssthread = cwnd/2.0;
                 cwnd = 1;
-                dupAckCount = 0;
+                dup_ack_cnt = 0;
                 printf("[INFO]: FAST_RECOVERY ---> SLOW_START, cwnd = %f\n", cwnd);
                 ctrl_state = SLOW_START;
-                return;
+                break;
             }
             if (newACK) {
                 cwnd = ssthread;
-                dupAckCount = 0;
+                dup_ack_cnt = 0;
                 printf("[INFO]: FAST_RECOVERY ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
                 ctrl_state = CONGESTION_AVOIDANCE;
             } else {
@@ -244,8 +245,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     printf("[INFO]: %llu packet(s) need to be sent\n", pkt_total);
 
     create_pkt_queue(BUFFER_SIZE, fp);
-    send_pkt(sockfd, fp);
     
+    int send_pkt_num;
+    send_pkt_num = send_pkt(sockfd);
+    create_pkt_queue(send_pkt_num, fp);
+
     int byte_num;
 
     while (!pkt_queue.empty() || !wait_ack.empty()) {
@@ -257,11 +261,10 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             printf("[INFO]: Timeout, resend packet %d\n", wait_ack.front().seq_num);
             memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
             if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1) {
-                perror("Error: data sending");
                 printf("Fail to send %d pkt\n", wait_ack.front().seq_num);
                 exit(2);
             }
-            congestionControl(false, true);
+            state_ctrl(false, true);
         } else {
             packet pkt;
             memcpy(&pkt, pkt_buf, sizeof(packet));
@@ -269,31 +272,32 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 printf("[INFO]: Receive ACK from receiver\n");
                 printf("        Receiver receives packet %d successfully\n", pkt.ack_num);
                 if (pkt.ack_num == wait_ack.front().seq_num) {
-                    congestionControl(false, false);
-                    if (dupAckCount == 3) {
+                    state_ctrl(false, false);
+                    if (dup_ack_cnt == 3) {
                         ssthread = cwnd/2.0;
                         cwnd = ssthread + 3;
-                        dupAckCount = 0;
+                        dup_ack_cnt = 0;
                         ctrl_state = FAST_RECOVERY;
                         printf("[INFO]: Receive 3 duplicate ACK ---> FAST_RECOVERY, cwnd = %f\n", cwnd);
                         // resend duplicated pkt
                         memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
                         if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1) {
-                            perror("Error: data sending");
-                            printf("Fail to send %d pkt", wait_ack.front().seq_num);
+                            printf("Fail to resend packet %d\n", wait_ack.front().seq_num);
                             exit(2);
                         }
                         printf("[INFO]: Receive 3 duplicate ACK, resend packet %d\n", wait_ack.front().seq_num);
                     }
                 } else if (pkt.ack_num > wait_ack.front().seq_num) {
                     while (!wait_ack.empty() && wait_ack.front().seq_num < pkt.ack_num) {
-                        congestionControl(true, false);
+                        state_ctrl(true, false);
                         wait_ack.pop();
                     }
-                    send_pkt(sockfd, fp);
+                    send_pkt_num = send_pkt(sockfd);
+                    create_pkt_queue(send_pkt_num, fp);
                 }
             }
         }
+        printf("----------------------------------------------------------------------\n");
     }
     fclose(fp);
 

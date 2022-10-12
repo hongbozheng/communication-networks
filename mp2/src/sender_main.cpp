@@ -261,7 +261,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             packet pkt;
             memcpy(&pkt, pkt_buf, sizeof(packet));
             if (pkt.msg_type == ACK) {
-                printf("[INFO]: Receive packet %d\n", pkt.ack_num);
+                printf("[INFO]: Receiver receives packet %d successfully\n", pkt.ack_num);
                 if (pkt.ack_num == wait_ack.front().seq_num) {
                     congestionControl(false, false);
                     if (dupAckCount == 3) {

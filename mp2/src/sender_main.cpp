@@ -63,7 +63,7 @@ void create_pkt_queue(int pkt_number, FILE *fp) {
     int pkt_data_byte;
     char buf[MSS];
     
-    for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
+    for (int i = 0; bytesToRead != 0 && i < pkt_number; ++i) {
         packet pkt;
         if (bytesToRead >= MSS) {
             pkt_data_byte = MSS;
@@ -177,6 +177,30 @@ void congestionControl(bool newACK, bool timeout) {
     }
 }
 
+void fin_ack(int sockfd) {
+    packet pkt;
+
+    while(1) {
+        pkt.data_size = 0;
+        pkt.seq_num = seq_number;
+        pkt.msg_type = FIN;
+        memcpy(pkt_buf, &pkt, sizeof(packet));
+        if((numbytes = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
+            printf("[ERROR]: Failed to send FIN to receiver\n");
+            exit(2);
+        }
+        if ((numbytes = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
+            printf("[ERROR]: Failed to receive ACK from receiver\n");
+            exit(2);
+        }
+        memcpy(&pkt, pkt_buf, sizeof(packet));
+        if (pkt.msg_type == FIN_ACK) {
+            printf("[INFO]: Receive the FIN_ACK\n");
+            break;
+        }
+    }
+}
+
 void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* filename, unsigned long long int bytesToTransfer) {
     /*
     //Open the file
@@ -269,31 +293,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     }
     fclose(fp);
 
-    packet pkt;
-    while (true) {
-        pkt.msg_type = FIN;
-        pkt.data_size=0;
-        memcpy(pkt_buf, &pkt, sizeof(packet));
-        if((numbytes = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            perror("can not send FIN to sender");
-            exit(2);
-        }
-        packet ack;
-        if ((numbytes = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
-            perror("can not receive from sender");
-            exit(2);
-        }
-        memcpy(&ack, pkt_buf, sizeof(packet));
-        if (ack.msg_type == FIN_ACK) {
-            printf("[INFO]: Receive the FIN_ACK\n");
-            break;
-        }
-    }
+    fin_ack(sockfd);
 
     printf("[INFO]: Closing the socket\n");
     close(s);
     return;
-
 }
 
 /*

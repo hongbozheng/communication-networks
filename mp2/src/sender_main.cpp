@@ -58,6 +58,35 @@ void set_socket_timeout(int sockfd){
     }
 }
 
+int fillBuffer(int pkt_number, FILE *fp) {
+    if (pkt_number == 0) return 0;
+    int byte_of_pkt;
+    char buf[MSS];
+    int count = 0;
+    for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
+        packet pkt;
+        if (bytesToRead < MSS) {
+            byte_of_pkt = bytesToRead;
+        } else {
+            byte_of_pkt = MSS;
+        }
+        int byte_read = fread(buf, sizeof(char), byte_of_pkt, fp);
+        if (byte_read > 0) {
+            pkt.data_size = byte_read;
+            pkt.msg_type = DATA;
+            pkt.seq_num = seq_number;
+            memcpy(pkt.data, &buf,sizeof(char)*byte_of_pkt);
+            buffer.push(pkt);
+            seq_number = (seq_number + 1) % MAX_SEQ_NUMBER;
+        } else {
+            printf("[INFO]: Reach EOF, fread 0 byte\n");
+        }
+        bytesToRead -= byte_read;
+        count = i;
+    }
+    return count;
+}
+
 void sendPkts(int socket, FILE *fp) {
 
     int pkts_to_send =(cwnd - wait_ack.size()) <= buffer.size() ? cwnd - wait_ack.size() : buffer.size();
@@ -88,33 +117,6 @@ void sendPkts(int socket, FILE *fp) {
         buffer.pop();
     }
     fillBuffer(pkts_to_send, fp);
-}
-
-int fillBuffer(int pkt_number, FILE *fp) {
-    if (pkt_number == 0) return 0;
-    int byte_of_pkt;
-    char data_buffer[MSS];
-    int count = 0;
-    for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
-        packet pkt;
-        if (bytesToRead < MSS) {
-            byte_of_pkt = bytesToRead;
-        } else {
-            byte_of_pkt = MSS;
-        }
-        int file_size = fread(data_buffer, sizeof(char), byte_of_pkt, fp);
-        if (file_size > 0) {
-            pkt.data_size = file_size;
-            pkt.msg_type = DATA;
-            pkt.seq_num = seq_number;
-            memcpy(pkt.data, &data_buffer,sizeof(char)*byte_of_pkt);
-            buffer.push(pkt);
-            seq_number = (seq_number + 1) % MAX_SEQ_NUMBER;
-        }
-        bytesToRead -= file_size;
-        count = i;
-    }
-    return count;
 }
 
 void congestionControl(bool newACK, bool timeout) {

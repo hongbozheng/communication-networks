@@ -68,8 +68,8 @@ int congetion_ctrl_state = SLOW_START;
 
 // slide window
 unsigned long long int seq_number;
-char pkt_buffer[sizeof(packet)];
-std::queue<packet> buffer;
+char pkt_buf[sizeof(packet)];
+std::queue<packet> pkt_queue;
 std::queue<packet> wait_ack;
 
 

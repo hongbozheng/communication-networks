@@ -87,8 +87,14 @@ void create_pkt_queue(int pkt_number, FILE *fp) {
 }
 
 void send_pkt(int sockfd, FILE *fp) {
-    int byte_send;
+    if (pkt_queue.empty()) {
+        printf("[INFO]: No packet(s) need to be sent\n");
+        return;
+    }
+    
     int pkts_to_send = (cwnd - wait_ack.size()) <= pkt_queue.size() ? cwnd - wait_ack.size() : pkt_queue.size();
+    int byte_send;
+    
     if (cwnd - wait_ack.size() < 1) {
         memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
         if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
@@ -96,10 +102,6 @@ void send_pkt(int sockfd, FILE *fp) {
             exit(2);
         }
         printf("[INFO]: Send packet %d, cwnd = %f\n", wait_ack.front().seq_num, cwnd);
-        return;
-    }
-    if (pkt_queue.empty()) {
-        printf("[INFO]: No packet(s) need to be sent\n");
         return;
     }
 
@@ -132,7 +134,7 @@ void congestionControl(bool newACK, bool timeout) {
                 dupAckCount++;
             }
             if (cwnd >= ssthread) {
-                //cout << "SLOW_START to CONGESTION_AVOIDANCE, cwnd = " << cwnd <<endl;
+                printf("[INFO]: SLOW_START ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
                 congetion_ctrl_state = CONGESTION_AVOIDANCE;
             }
             break;
@@ -141,7 +143,7 @@ void congestionControl(bool newACK, bool timeout) {
                 ssthread = cwnd/2.0;
                 cwnd = 1;
                 dupAckCount = 0;
-                //cout << "CONGESTION_AVOIDANCE to SLOW_START, cwnd=" << cwnd <<endl;
+                printf("[INFO]: CONGESTION_AVOIDANCE ---> SLOW_START, cwnd = %f\n", cwnd);
                 congetion_ctrl_state = SLOW_START;
                 return;
             }
@@ -157,14 +159,14 @@ void congestionControl(bool newACK, bool timeout) {
                 ssthread = cwnd/2.0;
                 cwnd = 1;
                 dupAckCount = 0;
-                //cout << "FAST_RECOVERY is SLOW_START, cwnd= " << cwnd <<endl;
+                printf("[INFO]: FAST_RECOVERY ---> SLOW_START, cwnd = %f\n", cwnd);
                 congetion_ctrl_state = SLOW_START;
                 return;
             }
             if (newACK) {
                 cwnd = ssthread;
                 dupAckCount = 0;
-                //cout << "FAST_RECOVERY is CONGESTION_AVOIDANCE, cwnd = " << cwnd << endl;
+                printf("[INFO]: FAST_RECOVERY ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
                 congetion_ctrl_state = CONGESTION_AVOIDANCE;
             } else {
                 cwnd = (cwnd+1 >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+1;

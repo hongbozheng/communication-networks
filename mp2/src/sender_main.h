@@ -77,7 +77,7 @@ int getSocket(char *hostname, unsigned short int hostUDPport);
 void openFile(char* filename, unsigned long long int bytesToTransfer);
 void congestionControl(bool newACK, bool timeout);
 void create_pkt_queue(int pkt_number, FILE *fp);
-void sendPkts(int socket, FILE *fp);
+void send_pkt(int socket, FILE *fp);
 void setSockTimeout(int socket);
 
 struct sockaddr_in si_other;

@@ -58,7 +58,7 @@ void set_socket_timeout(int sockfd){
     }
 }
 
-void sendPkts(int socket) {
+void sendPkts(int socket, FILE *fp) {
 
     int pkts_to_send =(cwnd - wait_ack.size()) <= buffer.size() ? cwnd - wait_ack.size() : buffer.size();
     if (cwnd - wait_ack.size() < 1) {
@@ -87,10 +87,10 @@ void sendPkts(int socket) {
         wait_ack.push(buffer.front());
         buffer.pop();
     }
-    fillBuffer(pkts_to_send);
+    fillBuffer(pkts_to_send, fp);
 }
 
-int fillBuffer(int pkt_number) {
+int fillBuffer(int pkt_number, FILE *fp) {
     if (pkt_number == 0) return 0;
     int byte_of_pkt;
     char data_buffer[MSS];
@@ -176,19 +176,6 @@ void congestionControl(bool newACK, bool timeout) {
     }
 }
 
-void openFile(char* filename, unsigned long long int bytesToTransfer) {
-    // Open the file
-    fp = fopen(filename, "rb");
-    if (fp == NULL) {
-        printf("Could not open file to send.");
-        exit(1);
-    }
-    bytesToRead = bytesToTransfer;
-
-    num_pkt_total = (unsigned long long int) ceil(bytesToRead * 1.0 / MSS);
-    //cout << num_pkt_total << endl;
-}
-
 void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* filename, unsigned long long int bytesToTransfer) {
     /*
     //Open the file
@@ -220,11 +207,22 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 	int sockfd = get_socket(hostname, hostUDPport);
     set_socket_timeout(sockfd);
     
-    openFile(filename, bytesToTransfer);
+    //openFile(filename, bytesToTransfer);
 
-    fillBuffer(BUFFER_SIZE);
+    // Open the file
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        printf("Could not open file to send.");
+        exit(1);
+    }
+    bytesToRead = bytesToTransfer;
 
-    sendPkts(sockfd);
+    unsigned long long int pkt_total = (unsigned long long int) ceil((float)bytesToRead / MSS);
+    printf("[INFO]: %llu packet(s) need to be sent\n", pkt_total);
+
+    fillBuffer(BUFFER_SIZE, fp);
+
+    sendPkts(sockfd, fp);
     while (!buffer.empty() || !wait_ack.empty()) {
         if((numbytes = recvfrom(sockfd, pkt_buffer, sizeof(packet), 0, NULL, NULL)) == -1) {
             if (errno != EAGAIN || errno != EWOULDBLOCK) {
@@ -266,7 +264,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                         congestionControl(true, false);
                         wait_ack.pop();
                     }
-                    sendPkts(sockfd);
+                    sendPkts(sockfd, fp);
                 }
             }
         }

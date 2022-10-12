@@ -48,7 +48,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     }
 
     int idx = 0;
-    
+    int recv_byte;
     packet pkt;
 
     while(1){
@@ -71,13 +71,14 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
                     while(ack[idx]==1){
                         fwrite(&file_buf[idx*DATA_SIZE],sizeof(char),data_size[idx],fp);
                         printf("[INFO]: Write index %d\n", idx);
+                        printf("------------------------------------------------------------\n");
                         ack[idx] = 0;
                         idx  = (idx+1)%PKT_BUF_SIZE;
                         nextACK++;
                     }
-                } else if(pkt.seq_num>nextACK) {
+                } else if(pkt.seq_num > nextACK) {
                     int ahead_idx = (idx+pkt.seq_num-nextACK)%PKT_BUF_SIZE;
-                    for (int i=0;i<pkt.data_size;i++) {
+                    for(int i=0; i<pkt.data_size; i++) {
                         file_buf[ahead_idx*DATA_SIZE+i] = pkt.data[i];
                     }
                     ack[ahead_idx] = 1;
@@ -93,8 +94,8 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 
             case FIN:
                 pkt.data_size = 0;
-                pkt.msg_type = FIN_ACK;
                 pkt.ack_num = nextACK;
+                pkt.msg_type = FIN_ACK;
                 memcpy(buf, &pkt, sizeof(packet));
                 sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
                 goto finish;

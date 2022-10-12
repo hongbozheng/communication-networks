@@ -64,7 +64,7 @@ int numbytes;
 double cwnd = 1.0;
 int ssthread = 64, dupAckCount = 0;
 enum socket_state {SLOW_START, CONGESTION_AVOIDANCE, FAST_RECOVERY, FIN_WAIT};
-int congetion_ctrl_state = SLOW_START;
+int ctrl_state = SLOW_START;
 
 // slide window
 unsigned long long int seq_number;

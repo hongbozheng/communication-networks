@@ -119,7 +119,7 @@ void send_pkt(int sockfd, FILE *fp) {
 }
 
 void congestionControl(bool newACK, bool timeout) {
-    switch (congetion_ctrl_state) {
+    switch (ctrl_state) {
         case SLOW_START:
             if (timeout) {
                 ssthread = cwnd/2.0;
@@ -135,7 +135,7 @@ void congestionControl(bool newACK, bool timeout) {
             }
             if (cwnd >= ssthread) {
                 printf("[INFO]: SLOW_START ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
-                congetion_ctrl_state = CONGESTION_AVOIDANCE;
+                ctrl_state = CONGESTION_AVOIDANCE;
             }
             break;
         case CONGESTION_AVOIDANCE:
@@ -144,7 +144,7 @@ void congestionControl(bool newACK, bool timeout) {
                 cwnd = 1;
                 dupAckCount = 0;
                 printf("[INFO]: CONGESTION_AVOIDANCE ---> SLOW_START, cwnd = %f\n", cwnd);
-                congetion_ctrl_state = SLOW_START;
+                ctrl_state = SLOW_START;
                 return;
             }
             if (newACK) {
@@ -160,14 +160,14 @@ void congestionControl(bool newACK, bool timeout) {
                 cwnd = 1;
                 dupAckCount = 0;
                 printf("[INFO]: FAST_RECOVERY ---> SLOW_START, cwnd = %f\n", cwnd);
-                congetion_ctrl_state = SLOW_START;
+                ctrl_state = SLOW_START;
                 return;
             }
             if (newACK) {
                 cwnd = ssthread;
                 dupAckCount = 0;
                 printf("[INFO]: FAST_RECOVERY ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
-                congetion_ctrl_state = CONGESTION_AVOIDANCE;
+                ctrl_state = CONGESTION_AVOIDANCE;
             } else {
                 cwnd = (cwnd+1 >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+1;
             }
@@ -266,23 +266,24 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             packet pkt;
             memcpy(&pkt, pkt_buf, sizeof(packet));
             if (pkt.msg_type == ACK) {
-                printf("[INFO]: Receiver receives packet %d successfully\n", pkt.ack_num);
+                printf("[INFO]: Receive ACK from receiver\n");
+                printf("        Receiver receives packet %d successfully\n", pkt.ack_num);
                 if (pkt.ack_num == wait_ack.front().seq_num) {
                     congestionControl(false, false);
                     if (dupAckCount == 3) {
                         ssthread = cwnd/2.0;
                         cwnd = ssthread + 3;
                         dupAckCount = 0;
-                        congetion_ctrl_state = FAST_RECOVERY;
-                        printf("[INFO]: 3 duplicate tp FAST_RECOVERY, cwnd = %f\n", cwnd);
+                        ctrl_state = FAST_RECOVERY;
+                        printf("[INFO]: Receive 3 duplicate ACK ---> FAST_RECOVERY, cwnd = %f\n", cwnd);
                         // resend duplicated pkt
                         memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
-                        if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
+                        if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1) {
                             perror("Error: data sending");
                             printf("Fail to send %d pkt", wait_ack.front().seq_num);
                             exit(2);
                         }
-                        printf("[INFO]: 3 duplicate ACKs, resend packet %d\n", wait_ack.front().seq_num);
+                        printf("[INFO]: Receive 3 duplicate ACK, resend packet %d\n", wait_ack.front().seq_num);
                     }
                 } else if (pkt.ack_num > wait_ack.front().seq_num) {
                     while (!wait_ack.empty() && wait_ack.front().seq_num < pkt.ack_num) {

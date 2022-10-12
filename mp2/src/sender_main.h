@@ -32,7 +32,7 @@
 #include <errno.h>      // EAGAIN/EWOULDBLOCK
 #include <queue>        // queue<packet>
 
-#define MSS 2000                // maximum segment size
+#define MSS 2000
 #define BUFFER_SIZE 300
 #define DATA 0
 #define ACK 2
@@ -41,22 +41,23 @@
 #define MAX_SEQ_NUMBER 100000
 #define RTT 20*1000
 
-// packet for data transfer
+//packet structure used for transfering
 typedef struct{
     int 	data_size;
     int 	seq_num;
     int     ack_num;
     int     msg_type; //DATA 0 SYN 1 ACK 2 FIN 3 FINACK 4
     char    data[MSS];
-} packet;
+}packet;
 
+FILE* fp;
+unsigned long long int num_pkt_total;
 unsigned long long int bytesToRead;
 //int file_point = 0;
 
-// socket
-// I don't think we need the receiver's address info, use NULL instead
-//struct sockaddr_storage recv_addr; // connector's address information
-//socklen_t addr_len = sizeof recv_addr;
+// socket relevant
+struct sockaddr_storage their_addr; // connector's address information
+socklen_t addr_len = sizeof their_addr;
 struct addrinfo hints, *recvinfo, *p;
 int numbytes;
 
@@ -68,7 +69,7 @@ int congetion_ctrl_state = SLOW_START;
 
 // slide window
 unsigned long long int seq_number;
-char pkt_buf[sizeof(packet)];
+char pkt_buffer[sizeof(packet)];
 std::queue<packet> buffer;
 std::queue<packet> wait_ack;
 

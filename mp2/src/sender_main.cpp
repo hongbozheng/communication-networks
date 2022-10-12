@@ -58,34 +58,32 @@ void set_socket_timeout(int sockfd){
     }
 }
 
-int create_pkt_queue(int pkt_number, FILE *fp) {
-    if (pkt_number == 0) return 0;
-    int pkt_byte;
+void create_pkt_queue(int pkt_number, FILE *fp) {
+    if (pkt_number == 0) return;
+    int pkt_data_byte;
     char buf[MSS];
-    int count = 0;
+    
     for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
         packet pkt;
         if (bytesToRead >= MSS) {
-            pkt_byte = MSS;
+            pkt_data_byte = MSS;
         } else {
-            pkt_byte = bytesToRead;
+            pkt_data_byte = bytesToRead;
         }
 
-        int byte_read = fread(buf, sizeof(char), pkt_byte, fp);
+        int byte_read = fread(buf, sizeof(char), pkt_data_byte, fp);
         if (byte_read > 0) {
             pkt.data_size = byte_read;
             pkt.msg_type = DATA;
             pkt.seq_num = seq_number;
-            memcpy(pkt.data, &buf, sizeof(char)*pkt_byte);
+            memcpy(pkt.data, &buf, sizeof(char)*pkt_data_byte);
             pkt_queue.push(pkt);
             seq_number = (seq_number + 1) % MAX_SEQ_NUMBER;
         } else {
             printf("[INFO]: Reach EOF, fread 0 byte\n");
         }
         bytesToRead -= byte_read;
-        count = i;
     }
-    return count;
 }
 
 void sendPkts(int socket, FILE *fp) {

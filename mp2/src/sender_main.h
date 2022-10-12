@@ -76,7 +76,7 @@ std::queue<packet> wait_ack;
 int getSocket(char *hostname, unsigned short int hostUDPport);
 void openFile(char* filename, unsigned long long int bytesToTransfer);
 void congestionControl(bool newACK, bool timeout);
-int fillBuffer(int pkt_number, FILE *fp);
+void create_pkt_queue(int pkt_number, FILE *fp);
 void sendPkts(int socket, FILE *fp);
 void setSockTimeout(int socket);
 

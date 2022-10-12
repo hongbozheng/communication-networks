@@ -87,31 +87,29 @@ void create_pkt_queue(int pkt_number, FILE *fp) {
 }
 
 void send_pkt(int sockfd, FILE *fp) {
-
     int pkts_to_send = (cwnd - wait_ack.size()) <= pkt_queue.size() ? cwnd - wait_ack.size() : pkt_queue.size();
     if (cwnd - wait_ack.size() < 1) {
         memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
         if((numbytes = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            perror("Error: data sending");
-            printf("Fail to send %d pkt", wait_ack.front().seq_num);
+            printf("Fail to send %d pkt\n", wait_ack.front().seq_num);
             exit(2);
         }
-        //cout << "Sent pkt "<< wait_ack.front().seq_num << " cwnd = "<< cwnd << endl;
+        printf("[INFO]: Send packet %d, cwnd = %f\n", wait_ack.front().seq_num, cwnd);
         return;
     }
     if (pkt_queue.empty()) {
-        //cout << "no packet to send" << endl;
+        printf("[INFO]: No packet(s) need to be sent\n");
         return;
     }
 
+    int byte_send;
     for (int i = 0; i < pkts_to_send; ++i) {
         memcpy(pkt_buf, &pkt_queue.front(), sizeof(packet));
-        if((numbytes = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            perror("Error: data sending");
-            printf("Fail to send %d pkt", pkt_queue.front().seq_num);
+        if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1){
+            printf("Fail to send packet %d\n", pkt_queue.front().seq_num);
             exit(2);
         }
-        //cout << "Sent pkt "<< buffer.front().seq_num << " cwnd = "<< cwnd << endl;
+        printf("[INFO]: Sent packet %d, cwnd = %f\n", pkt_queue.front().seq_num, cwnd);
         wait_ack.push(pkt_queue.front());
         pkt_queue.pop();
     }

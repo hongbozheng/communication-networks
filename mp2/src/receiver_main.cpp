@@ -61,45 +61,57 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         memcpy(&pkt,buf,sizeof(packet));
         printf("[INFO]: Receive packet %d, Type %d\n", pkt.seq_num, pkt.msg_type);
         
-        if (pkt.msg_type == DATA){
-            if(pkt.seq_num == nextACK){
-                memcpy(&file_buf[idx*DATA_SIZE], &pkt.data , pkt.data_size);
-                fwrite(&file_buf[idx*DATA_SIZE],sizeof(char),pkt.data_size,fp);
-                printf("[INFO]: Write packet %d\n", pkt.seq_num);
-                nextACK++;
-                idx  = (idx+1)%PKT_BUF_SIZE;
-                while(ack[idx]==1){
-                    fwrite(&file_buf[idx*DATA_SIZE],sizeof(char),data_size[idx],fp);
-                    printf("[INFO]: Write index %d\n", idx);
-                    ack[idx] = 0;
-                    idx  = (idx+1)%PKT_BUF_SIZE;
+        switch(pkt.msg_type) {
+            case DATA:
+                if(pkt.seq_num == nextACK){
+                    memcpy(&file_buf[idx*DATA_SIZE], &pkt.data , pkt.data_size);
+                    fwrite(&file_buf[idx*DATA_SIZE],sizeof(char),pkt.data_size,fp);
+                    printf("[INFO]: Write packet %d\n", pkt.seq_num);
                     nextACK++;
+                    idx  = (idx+1)%PKT_BUF_SIZE;
+                    while(ack[idx]==1){
+                        fwrite(&file_buf[idx*DATA_SIZE],sizeof(char),data_size[idx],fp);
+                        printf("[INFO]: Write index %d\n", idx);
+                        ack[idx] = 0;
+                        idx  = (idx+1)%PKT_BUF_SIZE;
+                        nextACK++;
+                    }
+                } else if(pkt.seq_num>nextACK) {
+                    int ahead_idx = (idx+pkt.seq_num-nextACK)%PKT_BUF_SIZE;
+                    for (int i=0;i<pkt.data_size;i++) {
+                        file_buf[ahead_idx*DATA_SIZE+i] = pkt.data[i];
+                    }
+                    ack[ahead_idx] = 1;
+                    data_size[ahead_idx] = pkt.data_size;
                 }
-            }else if(pkt.seq_num>nextACK){
-                int ahead_idx = (idx+pkt.seq_num-nextACK)%PKT_BUF_SIZE;
-                for (int i=0;i<pkt.data_size;i++) {
-                    file_buf[ahead_idx*DATA_SIZE+i] = pkt.data[i];
-                }
-                ack[ahead_idx] = 1;
-                data_size[ahead_idx] = pkt.data_size;
-            }
-            pkt.data_size = 0;
-            pkt.msg_type = ACK;
-            pkt.ack_num = nextACK;
-            memcpy(buf, &pkt, sizeof(packet));
-            sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
-            printf("[INFO]: Sent ACK %d\n", pkt.ack_num);
+                pkt.data_size = 0;
+                pkt.msg_type = ACK;
+                pkt.ack_num = nextACK;
+                memcpy(buf, &pkt, sizeof(packet));
+                sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
+                printf("[INFO]: Sent ACK %d\n", pkt.ack_num);
+                break;
+
+            case FIN:
+                pkt.data_size = 0;
+                pkt.msg_type = FIN_ACK;
+                pkt.ack_num = nextACK;
+                memcpy(buf, &pkt, sizeof(packet));
+                sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
+                goto finish;
+
+            default:
+                break;
+        }
+        /*
+        if (pkt.msg_type == DATA){
         
         } else if(pkt.msg_type == FIN){
-            pkt.data_size = 0;
-            pkt.msg_type = FIN_ACK;
-            pkt.ack_num = nextACK;
-            memcpy(buf, &pkt, sizeof(packet));
-            sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
-            break;
-        }
+            
+        }*/
     }
 
+finish:
     close(s);
 	printf("[INFO]: File %s received\n", destinationFile);
     return;

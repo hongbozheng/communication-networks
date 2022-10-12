@@ -11,9 +11,6 @@
 
 #include "sender_main.h"
 
-//struct sockaddr_in si_other;
-//int s, slen;
-
 void diep(char *s) {
     perror(s);
     exit(1);
@@ -115,7 +112,6 @@ int send_pkt(int sockfd) {
         wait_ack.push(pkt_queue.front());
         pkt_queue.pop();
     }
-    //create_pkt_queue(pkts_to_send, fp);
     return send_pkt_num;
 }
 
@@ -191,7 +187,7 @@ void fin_ack(int sockfd) {
             printf("[ERROR]: Failed to send FIN to receiver\n");
             exit(2);
         }
-        if ((byte_num = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, (struct sockaddr *) &their_addr, &addr_len)) == -1) {
+        if ((byte_num = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, NULL, NULL)) == -1) {
             printf("[ERROR]: Failed to receive ACK from receiver\n");
             exit(2);
         }
@@ -279,7 +275,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                         dup_ack_cnt = 0;
                         ctrl_state = FAST_RECOVERY;
                         printf("[INFO]: Receive 3 duplicate ACK ---> FAST_RECOVERY, cwnd = %f\n", cwnd);
-                        // resend duplicated pkt
                         memcpy(pkt_buf, &wait_ack.front(), sizeof(packet));
                         if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1) {
                             printf("Fail to resend packet %d\n", wait_ack.front().seq_num);

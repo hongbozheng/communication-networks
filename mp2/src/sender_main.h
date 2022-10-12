@@ -52,13 +52,9 @@ typedef struct{
 
 FILE* fp;
 unsigned long long int bytesToRead;
-//int file_point = 0;
 
-// socket relevant
-struct sockaddr_storage their_addr; // connector's address information
-socklen_t addr_len = sizeof their_addr;
+// socket
 struct addrinfo hints, *recvinfo, *p;
-int numbytes;
 
 // Congestion Control
 double cwnd = 1.0;

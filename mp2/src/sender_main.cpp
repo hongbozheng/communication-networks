@@ -315,10 +315,7 @@ int main(int argc, char** argv) {
     udpPort = (unsigned short int) atoi(argv[2]);
     numBytes = atoll(argv[4]);
 
-
-
     reliablyTransfer(argv[1], udpPort, argv[3], numBytes);
-
 
     return (EXIT_SUCCESS);
 }

@@ -19,12 +19,41 @@ void diep(char *s) {
     exit(1);
 }
 
-void setSockTimeout(int socket){
-    struct timeval RTT_TO;
-    RTT_TO.tv_sec = 0;
-    RTT_TO.tv_usec = 2 * RTT;
-    if (setsockopt(socket, SOL_SOCKET,SO_RCVTIMEO,&RTT_TO,sizeof(RTT_TO)) < 0) {
-        fprintf(stderr, "Error setting socket timeout\n");
+int get_socket(char * hostname, unsigned short int hostUDPport) {
+    int rv, sockfd;
+    char port[10];
+    sprintf(port, "%d", hostUDPport);
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    memset(&recvinfo,0,sizeof recvinfo);
+    if ((rv = getaddrinfo(hostname, port, &hints, &recvinfo)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        return 1;
+    }
+
+    // loop through all the results and bind to the first we can
+    for(p = recvinfo; p != NULL; p = p->ai_next) {
+        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            printf("[ERROR]: Cannot open the socket\n");
+            continue;
+        }
+        break;
+    }
+    if (p == NULL)  {
+        printf("[ERROR]: Server failed to bind\n");
+        exit(1);
+    }
+
+    return sockfd;
+}
+
+void set_socket_timeout(int socket){
+    struct timeval TIMEOUT;
+    TIMEOUT.tv_sec = 0;
+    TIMEOUT.tv_usec = 2*RTT;
+    if (setsockopt(socket, SOL_SOCKET,SO_RCVTIMEO,&TIMEOUT,sizeof(TIMEOUT)) == -1) {
+        printf("[ERROR]: Failed to set socket timeout\n");
         return;
     }
 }
@@ -146,35 +175,6 @@ void congestionControl(bool newACK, bool timeout) {
             break;
     }
 }
-int getSocket(char * hostname, unsigned short int hostUDPport) {
-    int rv, sockfd;
-    char portStr[10];
-    sprintf(portStr, "%d", hostUDPport);
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    memset(&recvinfo,0,sizeof recvinfo);
-    if ((rv = getaddrinfo(hostname, portStr, &hints, &recvinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
-    }
-
-    // loop through all the results and bind to the first we can
-    for(p = recvinfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype,
-                             p->ai_protocol)) == -1) {
-            perror("server: error opening socket");
-            continue;
-        }
-        break;
-    }
-    if (p == NULL)  {
-        fprintf(stderr, "server: failed to bind\n");
-        exit(1);
-    }
-
-    return sockfd;
-}
 
 void openFile(char* filename, unsigned long long int bytesToTransfer) {
     // Open the file
@@ -217,11 +217,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
 	/* Send data and receive acknowledgements on s*/
 
-	int socket = getSocket(hostname, hostUDPport);
+	int socket = get_socket(hostname, hostUDPport);
     openFile(filename, bytesToTransfer);
 
     fillBuffer(BUFFER_SIZE);
-    setSockTimeout(socket);
+    set_socket_timeout(socket);
     sendPkts(socket);
     while (!buffer.empty() || !wait_ack.empty()) {
         if((numbytes = recvfrom(socket, pkt_buffer, sizeof(packet), 0, NULL, NULL)) == -1) {

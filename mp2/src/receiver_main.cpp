@@ -58,9 +58,9 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
             fprintf(stderr, "Connection closed\n");
             exit(2);
         }
-        //packet pkt;
         memcpy(&pkt,buf,sizeof(packet));
         printf("[INFO]: Receive packet %d, Type %d\n", pkt.seq_num, pkt.msg_type);
+        
         if (pkt.msg_type == DATA){
             if(pkt.seq_num == nextACK){
                 memcpy(&file_buf[idx*DATA_SIZE], &pkt.data , pkt.data_size);
@@ -83,19 +83,18 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
                 ack[ahead_idx] = 1;
                 data_size[ahead_idx] = pkt.data_size;
             }
-            //packet ack;
-            pkt.msg_type=ACK;
-            pkt.ack_num = nextACK;
             pkt.data_size = 0;
-            memcpy(buf,&pkt,sizeof(packet));
+            pkt.msg_type = ACK;
+            pkt.ack_num = nextACK;
+            memcpy(buf, &pkt, sizeof(packet));
             sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
             printf("[INFO]: Sent ACK %d\n", pkt.ack_num);
-        }else if(pkt.msg_type== FIN){
-            //packet ack;
+        
+        } else if(pkt.msg_type == FIN){
             pkt.data_size = 0;
             pkt.msg_type = FIN_ACK;
             pkt.ack_num = nextACK;
-            memcpy(buf,&pkt,sizeof(packet));
+            memcpy(buf, &pkt, sizeof(packet));
             sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
             break;
         }

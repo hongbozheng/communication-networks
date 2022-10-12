@@ -65,11 +65,12 @@ int fillBuffer(int pkt_number, FILE *fp) {
     int count = 0;
     for (int i = 0; bytesToRead!= 0 && i < pkt_number; ++i) {
         packet pkt;
-        if (bytesToRead < MSS) {
-            byte_of_pkt = bytesToRead;
-        } else {
+        if (bytesToRead >= MSS) {
             byte_of_pkt = MSS;
+        } else {
+            byte_of_pkt = bytesToRead;
         }
+
         int byte_read = fread(buf, sizeof(char), byte_of_pkt, fp);
         if (byte_read > 0) {
             pkt.data_size = byte_read;

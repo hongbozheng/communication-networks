@@ -65,22 +65,19 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
                 if(pkt.seq_num == next_ack){
                     memcpy(&file_buf[idx*DATA_SIZE], &pkt.data , pkt.data_size);
                     fwrite(&file_buf[idx*DATA_SIZE], sizeof(char), pkt.data_size, fp);
-                    printf("[INFO]: Write packet %d\n", pkt.seq_num);
+                    printf("[INFO]: Write packet %d to file\n", pkt.seq_num);
                     ++next_ack;
                     idx = (idx+1)%PKT_BUF_SIZE;
-                    while(ack[idx]==1){
+                    while(ack[idx] == 1) {
                         fwrite(&file_buf[idx*DATA_SIZE], sizeof(char), data_size[idx], fp);
-                        printf("[INFO]: Write index %d\n", idx);
-                        printf("------------------------------------------------------------\n");
+                        printf("[INFO]: Write packet %d to file\n", idx);
                         ack[idx] = 0;
                         idx = (idx+1)%PKT_BUF_SIZE;
                         ++next_ack;
                     }
                 } else if(pkt.seq_num > next_ack) {
                     int fut_idx = (idx + pkt.seq_num - next_ack)%PKT_BUF_SIZE;
-                    for(int i = 0; i < pkt.data_size; i++) {
-                        file_buf[fut_idx*DATA_SIZE+i] = pkt.data[i];
-                    }
+                    memcpy(&file_buf[fut_idx*DATA_SIZE], &pkt.data, pkt.data_size);
                     ack[fut_idx] = 1;
                     data_size[fut_idx] = pkt.data_size;
                 }

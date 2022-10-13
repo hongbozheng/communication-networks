@@ -39,7 +39,7 @@
 #define FIN 3
 #define FIN_ACK 4
 #define MAX_SEQ_NUMBER 100000
-#define RTT 20*1000
+#define RTT 10*1000
 
 //packet structure used for transfering
 typedef struct{

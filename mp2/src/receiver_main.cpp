@@ -39,7 +39,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 
     char file_buf [BUF_SIZE];
 
-    int nextACK = 0;
+    int next_ack= 0;
     int ack[PKT_BUF_SIZE];
     int data_size [PKT_BUF_SIZE];
     for (int i = 0; i < PKT_BUF_SIZE; ++i){
@@ -62,22 +62,22 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         
         switch(pkt.msg_type) {
             case DATA:
-                if(pkt.seq_num == nextACK){
+                if(pkt.seq_num == next_ack){
                     memcpy(&file_buf[idx*DATA_SIZE], &pkt.data , pkt.data_size);
                     fwrite(&file_buf[idx*DATA_SIZE], sizeof(char), pkt.data_size, fp);
                     printf("[INFO]: Write packet %d\n", pkt.seq_num);
-                    nextACK++;
+                    ++next_ack;
                     idx = (idx+1)%PKT_BUF_SIZE;
                     while(ack[idx]==1){
-                        fwrite(&file_buf[idx*DATA_SIZE],sizeof(char),data_size[idx],fp);
+                        fwrite(&file_buf[idx*DATA_SIZE], sizeof(char), data_size[idx], fp);
                         printf("[INFO]: Write index %d\n", idx);
                         printf("------------------------------------------------------------\n");
                         ack[idx] = 0;
                         idx = (idx+1)%PKT_BUF_SIZE;
-                        nextACK++;
+                        ++next_ack;
                     }
-                } else if(pkt.seq_num > nextACK) {
-                    int fut_idx = (idx+pkt.seq_num-nextACK)%PKT_BUF_SIZE;
+                } else if(pkt.seq_num > next_ack) {
+                    int fut_idx = (idx + pkt.seq_num - next_ack)%PKT_BUF_SIZE;
                     for(int i = 0; i < pkt.data_size; i++) {
                         file_buf[fut_idx*DATA_SIZE+i] = pkt.data[i];
                     }
@@ -86,7 +86,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
                 }
                 pkt.data_size = 0;
                 pkt.msg_type = ACK;
-                pkt.ack_num = nextACK;
+                pkt.ack_num = next_ack;
                 memcpy(buf, &pkt, sizeof(packet));
                 sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
                 printf("[INFO]: Sent ACK %d\n", pkt.ack_num);
@@ -94,7 +94,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 
             case FIN:
                 pkt.data_size = 0;
-                pkt.ack_num = nextACK;
+                pkt.ack_num = next_ack;
                 pkt.msg_type = FIN_ACK;
                 memcpy(buf, &pkt, sizeof(packet));
                 sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);

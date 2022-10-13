@@ -28,8 +28,8 @@
 #define FIN             3
 #define FIN_ACK         4
 #define DATA_SIZE       2000
-#define BUF_SIZE        600000
 #define PKT_BUF_SIZE    300
+#define BUF_SIZE        600000
 
 typedef struct {
     int data_size;

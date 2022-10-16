@@ -31,9 +31,9 @@
 #define CONTENT_BUFFER_SIZE 1200
 
 typedef struct {
-    char content[CONTENT_BUFFER_SIZE];
+    char data[CONTENT_BUFFER_SIZE];
     int seq_num;
-    int bytes_read;
+    int size;
 } packet;
 
 typedef struct {

@@ -45,7 +45,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     ofstream received_file;
     string destinationFileStr = destinationFile;
     received_file.open(destinationFileStr.c_str(), ios::binary);
-    int waiting_seq_num = 0;
+    int seq_num = 0;
     int byte_num;
 
     while (true) {
@@ -65,8 +65,8 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
             }
         }
 
-        printf("[INFO]: Receive packet %d, %d", pkt.seq_num, pkt.bytes_read);
-        cout << "[Receiver] - current waiting_seq_num: " << waiting_seq_num << "" << endl;
+        printf("[INFO]: Receive packet %d, %d byte(s)\n", pkt.seq_num, pkt.size);
+        printf("[INFO]: Waiting for seq_num %d\n", seq_num);
 
         if(n < 0) {
             fprintf(stderr, "[Receiver] - recv: %s (%d)\n", strerror(errno), errno);
@@ -75,7 +75,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         }
         if (byte_num > 0) {
             ACK ack;
-            if(pkt.seq_num == waiting_seq_num) {
+            if(pkt.seq_num == seq_num) {
                 ack.ack_num = pkt.seq_num + 1;
 
                 // mock packet loss
@@ -88,21 +88,19 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 //                }
 
                 n = ::sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen);
-                received_file.write(pkt.content, sizeof(char) * pkt.bytes_read);
-                waiting_seq_num += 1;
+                received_file.write(pkt.data, sizeof(char) * pkt.size);
+                seq_num += 1;
             } else {
-                ack.ack_num = waiting_seq_num;
+                ack.ack_num = seq_num;
                 if( ((double) rand() / (RAND_MAX)) < 0.03) {
                     cout << "********[Receiver]: PACKET LOSS OCCURRED FOR ACK: " << ack.ack_num << " **********" << endl;
                 } else {
                     n = ::sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen);
                 }
-//                n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
-                cout << "[Receiver] - ack " << ack.ack_num << " sent!" << endl;
+                printf("[INFO]: Send ACK %d\n", ack.ack_num);
             }
-            // else, drop the packet
         } else {
-            fprintf(stderr, "[Receiver] - numbytesReceived < 0: %s (%d)\n", strerror(errno), errno);
+            printf("[INFO]: recvfrom receives byte <= 0\n");
         }
     }
 

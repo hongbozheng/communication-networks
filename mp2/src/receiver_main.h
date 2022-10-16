@@ -30,15 +30,15 @@
 #define MAXDATASIZE 1100 // max number of bytes we can get at once
 #define CONTENT_BUFFER_SIZE 1200
 
-struct Packet {
+typedef struct {
     char content[CONTENT_BUFFER_SIZE];
     int seq_num;
     int bytes_read;
-};
+} packet;
 
-struct ACK_MSG {
+typedef struct {
     int ack_num;
-};
+} ACK;
 
 using namespace std;
 struct timeval tv;

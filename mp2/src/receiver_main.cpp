@@ -49,25 +49,23 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     int byte_num;
 
     while (true) {
-
-        cout << "--------------------------------------------------------" << endl;
-        Packet buf;
-        byte_num = ::recvfrom(sockfd, &buf, sizeof(buf), 0, (struct sockaddr *)&s_addr, &s_addrlen);
-
-
-        if(errno == EAGAIN || errno == EWOULDBLOCK) {
-            /*
-             * All files are transmitted.
-             * Sender Timeout!
-             * Let's close the socket : )
-             * */
-            cout << "[Receiver] - Sender TIMEOUT! Socket closed! " << endl;
-            break;
+        printf("--------------------------------------------------\n");
+        packet pkt;
+        if((byte_num = recvfrom(sockfd, &pkt, sizeof(pkt), 0, (struct sockaddr *)&s_addr, &s_addrlen)) == -1) {
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                /*
+                * All files are transmitted.
+                * Sender Timeout!
+                * Let's close the socket : )
+                **/
+                printf("[INFO] Server TIMEOUT Closing Socket\n");
+                break;
+            } else {
+                printf("[ERROR] recvfrom fail\n");
+            }
         }
 
-        cout << "[Receiver] - current received seq_num: " << buf.seq_num << endl;
-        cout << "[Receiver] - numbytesReceived: " << buf.bytes_read << endl;
-//        cout << "[Receiver] - buf.content:{" << buf.content << "}" << endl;
+        printf("[INFO]: Receive packet %d, %d", pkt.seq_num, pkt.bytes_read);
         cout << "[Receiver] - current waiting_seq_num: " << waiting_seq_num << "" << endl;
 
         if(n < 0) {
@@ -76,9 +74,9 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
             continue;
         }
         if (byte_num > 0) {
-            ACK_MSG ack_msg;
-            if(buf.seq_num == waiting_seq_num) {
-                ack_msg.ack_num = buf.seq_num + 1;
+            ACK ack;
+            if(pkt.seq_num == waiting_seq_num) {
+                ack.ack_num = pkt.seq_num + 1;
 
                 // mock packet loss
 //                double ran = ((double) rand() / (RAND_MAX));
@@ -89,18 +87,18 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 //                    n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
 //                }
 
-                n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &s_addr, s_addrlen);
-                received_file.write(buf.content, sizeof(char) * buf.bytes_read);
+                n = ::sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen);
+                received_file.write(pkt.content, sizeof(char) * pkt.bytes_read);
                 waiting_seq_num += 1;
             } else {
-                ack_msg.ack_num = waiting_seq_num;
+                ack.ack_num = waiting_seq_num;
                 if( ((double) rand() / (RAND_MAX)) < 0.03) {
-                    cout << "********[Receiver]: PACKET LOSS OCCURRED FOR ACK: " << ack_msg.ack_num << " **********" << endl;
+                    cout << "********[Receiver]: PACKET LOSS OCCURRED FOR ACK: " << ack.ack_num << " **********" << endl;
                 } else {
-                    n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &s_addr, s_addrlen);
+                    n = ::sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen);
                 }
 //                n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
-                cout << "[Receiver] - ack " << ack_msg.ack_num << " sent!" << endl;
+                cout << "[Receiver] - ack " << ack.ack_num << " sent!" << endl;
             }
             // else, drop the packet
         } else {

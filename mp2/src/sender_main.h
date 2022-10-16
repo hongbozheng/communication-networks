@@ -49,7 +49,7 @@ typedef struct {
 } packet;
 
 typedef struct {
-    int ack_num;
+    int seq_num;
 } ACK;
 
 int MSS = sizeof(char)*BUFFER_SIZE;

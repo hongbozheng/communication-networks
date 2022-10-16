@@ -126,7 +126,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
         //dup_ACK = 0;
         bool pkt_timeout = false;
-        bool has_3_dup_ack = false;
+        bool ack_3 = false;
         while(cwnd.size() < cwnd_capacity) {
             if(byte_xfer_total >= bytesToTransfer) {
                 final_packet_read = true;
@@ -200,9 +200,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         auto start_time = std::chrono::system_clock::now();
         for(int i = 0; i < cwnd.size(); ++i) {
             /* Timeout the for loop when the time is out */
-            auto end = std::chrono::system_clock::now();
+            //auto end = std::chrono::system_clock::now();
             if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count() >= TIMEOUT_SECONDS) {
-                cout << "[sender]: this round of ack waiting is timeout! " << endl;
+                printf("[INFO]: WAITING ACK TIMEOUT\n");
                 break;
             }
 
@@ -218,14 +218,14 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                     printf("[ERROR]: recvfrom fail\n");
                 }
             } else {
-                printf("[INFO]: ACK RECEIVED %d\n: ", ack.ack_num);
-                ACK_receive[ack.ack_num-seq_start-1] = true;
-                if(ack_freq_map.count(ack.ack_num) == 0) {
-                    ack_freq_map[ack.ack_num] = 1;
+                printf("[INFO]: ACK RECEIVED %d\n: ", ack.seq_num);
+                ACK_receive[ack.seq_num-seq_start-1] = true;
+                if(ack_freq_map.count(ack.seq_num) == 0) {
+                    ack_freq_map[ack.seq_num] = 1;
                 } else {
-                    ack_freq_map[ack.ack_num] += 1;
-                    if(ack_freq_map[ack.ack_num] == 3) {
-                        has_3_dup_ack = true;
+                    ack_freq_map[ack.seq_num] += 1;
+                    if(ack_freq_map[ack.seq_num] == 3) {
+                        ack_3 = true;
                     }
                 }
             }
@@ -258,16 +258,16 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         if(pkt_timeout) {
             ssthreash = cwnd_size / 2;
             cwnd_size = MSS;
-            cout << "[sender]: This round has timeout packet: " << ack.ack_num << endl;
+            cout << "[sender]: This round has timeout packet: " << ack.seq_num << endl;
             cout << "[sender]: current ssthreash: " << ssthreash << endl;
             cout << "[sender]: current MSS: " << MSS << endl;
             cout << "[sender]: current cwnd_size: " << cwnd_size << endl;
             cout << "[sender]: current test: " << (1000/1000) << endl;
             cout << "[sender]: current cwnd window size: " << (cwnd_size / MSS) << endl;
-        } else if(has_3_dup_ack) {
+        } else if(ack_3) {
             ssthreash = cwnd_size / 2;
             cwnd_size = ssthreash + 3 * MSS;
-            cout << "[sender]: This round has 3 duplicate acks: " << ack.ack_num << endl;
+            cout << "[sender]: This round has 3 duplicate acks: " << ack.seq_num << endl;
             cout << "[sender]: current ssthreash: " << ssthreash << endl;
             cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
         } else {

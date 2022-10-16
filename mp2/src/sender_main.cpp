@@ -96,7 +96,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
 	/* Send data and receive acknowledgements on s */
     c_addrlen= sizeof(c_addr);
-    int cwnd_size = MSS;
+    int cwnd = MSS;
 
     int ssthreash = INIT_SSTHRESH;
     int byte_xfer_total = 0;
@@ -113,8 +113,8 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     while(1) {
         printf("--------------------------------------------------------\n");
         /* Read bytes from the file and copy it to the current window */
-        int cwnd_capacity = cwnd_size / MSS;
-        cout << "[Sender]: new round of cwnd_size: " << cwnd_size << endl;
+        int cwnd_capacity = cwnd / MSS;
+        cout << "[Sender]: new round of cwnd_size: " << cwnd << endl;
         cout << "[Sender]: new round of ssthreash: " << ssthreash << endl;
         cout << "[Sender]: new round of MSS: " << MSS << endl;
         cout << "[Sender]: new round of cwnd: " << endl;
@@ -252,35 +252,35 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
 
         if(pkt_timeout) {
-            ssthreash = cwnd_size / 2;
-            cwnd_size = MSS;
+            ssthreash = cwnd / 2;
+            cwnd = MSS;
             cout << "[sender]: This round has timeout packet: " << ack.seq_num << endl;
             cout << "[sender]: current ssthreash: " << ssthreash << endl;
             cout << "[sender]: current MSS: " << MSS << endl;
-            cout << "[sender]: current cwnd_size: " << cwnd_size << endl;
+            cout << "[sender]: current cwnd_size: " << cwnd << endl;
             cout << "[sender]: current test: " << (1000/1000) << endl;
-            cout << "[sender]: current cwnd window size: " << (cwnd_size / MSS) << endl;
+            cout << "[sender]: current cwnd window size: " << (cwnd / MSS) << endl;
         } else if(ack_3) {
-            ssthreash = cwnd_size / 2;
-            cwnd_size = ssthreash + 3 * MSS;
+            ssthreash = cwnd / 2;
+            cwnd = ssthreash + 3 * MSS;
             cout << "[sender]: This round has 3 duplicate acks: " << ack.seq_num << endl;
             cout << "[sender]: current ssthreash: " << ssthreash << endl;
-            cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
+            cout << "[sender]: current cwnd: " << (cwnd / MSS) << endl;
         } else {
-            if(cwnd_size >= ssthreash) {
-                cwnd_size += MSS;
+            if(cwnd >= ssthreash) {
+                cwnd += MSS;
                 cout << "[sender]: Congestion Control Phase" << endl;
                 cout << "[sender]: current ssthreash: " << ssthreash << endl;
-                cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
+                cout << "[sender]: current cwnd: " << (cwnd / MSS) << endl;
             } else {
                 cout << "[sender]: Slow Start Phase" << endl;
-                if(cwnd_size * 2 >= ssthreash) {
-                    cwnd_size = ssthreash;
+                if(cwnd * 2 >= ssthreash) {
+                    cwnd = ssthreash;
                 } else {
-                    cwnd_size *= 2;
+                    cwnd *= 2;
                 }
                 cout << "[sender]: current ssthreash: " << ssthreash << endl;
-                cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
+                cout << "[sender]: current cwnd: " << (cwnd / MSS) << endl;
             }
         }
 

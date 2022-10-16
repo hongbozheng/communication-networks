@@ -23,11 +23,11 @@
 #include <errno.h>          // EAGAIN/EWOULDBLOCK
 #include <chrono>           // std::time
 #include <unordered_map>
-#include <deque>                                                                                    
+#include <deque>
 #include <algorithm>
 #include <iostream>
 
-#define BUFFER_SIZE 1200                                                                            
+#define BUFFER_SIZE 1200
 #define INIT_SSTHRESH 64000
 #define TIMEOUT_SECONDS 1
 #define SLOW_START 0
@@ -39,7 +39,7 @@ char read_buffer[BUFFER_SIZE];
 char ack_buffer[3];
 struct sockaddr_in si_other, c_addr;                                                                
 
-int sockfd, slen, n, transferredBytes, dupACKcount, ssthreash;
+int sockfd, slen, n, transferredBytes, dup_ACK, ssthreash;
 socklen_t c_addrlen;
 
 struct Packet {
@@ -51,6 +51,8 @@ struct Packet {
 struct ACK_MSG {
     int ack_num;
 };
+
+int MSS = sizeof(char)*BUFFER_SIZE;
 
 /*
 //packet structure used for transfering

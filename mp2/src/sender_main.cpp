@@ -97,7 +97,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 	/* Send data and receive acknowledgements on s */
     c_addrlen= sizeof(c_addr);
     transferredBytes = 0;
-    int MSS = sizeof(char) * BUFFER_SIZE;
     int cwnd_size = MSS;
     deque<Packet> cwnd;
     int current_bytes_read = 0;
@@ -111,7 +110,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     bool final_packet_read = false;
 //    double r = ((double) rand() / (RAND_MAX));
 
-    while(true) {
+    int byte_recv;
+
+    while(1) {
         cout << "--------------------------------------------------------" << endl;
         /* Read bytes from the file and copy it to the current window */
         int cwnd_capacity = cwnd_size / MSS;
@@ -121,7 +122,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         cout << "[Sender]: new round of cwnd: " << endl;
         cout << "[Sender]: new round of start_offset: " << start_offset << endl;
 
-        dupACKcount = 0;
+        dup_ACK = 0;
         bool has_timeout_packet = false;
         bool has_3_dup_ack = false;
         while(cwnd.size() < cwnd_capacity) {
@@ -207,11 +208,10 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
 
             /* Receiving ACKs */
-            n = recvfrom(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&c_addr, &c_addrlen);
-            if(n < 0) {
+            if((byte_recv = recvfrom(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&c_addr, &c_addrlen)) == -1) {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     // Receiving ACK TIMEOUT. Retransmit...
-                    cout << "[sender]: ack is missing.. resending... " << ack_buffer << endl;
+                    printf("[INFO]: Fail to receive ACK, resending packet %s\n",ack_buffer);
                     has_timeout_packet = true;
                 } else {
                     // Other errors occurred. Error msg printed.

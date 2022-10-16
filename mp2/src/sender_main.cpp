@@ -99,20 +99,17 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     transferredBytes = 0;
     int cwnd_size = MSS;
 
-    int byte_read = 0;
     int byte_xfer_total = 0;
     ssthreash = INIT_SSTHRESH;
-    int start_offset = 0;
-    //int i;
+    //int start_offset = 0;
     int seq_num = SEQUENCE_NUM_INIT;
+    int byte_num;
     packet pkt;
     ACK ack;
     deque<packet> cwnd;
     unordered_map<int, int> ack_freq_map;
     bool final_packet_read = false;
 //    double r = ((double) rand() / (RAND_MAX));
-
-    int byte_recv;
 
     while(1) {
         printf("--------------------------------------------------------\n");
@@ -122,7 +119,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         cout << "[Sender]: new round of ssthreash: " << ssthreash << endl;
         cout << "[Sender]: new round of MSS: " << MSS << endl;
         cout << "[Sender]: new round of cwnd: " << endl;
-        cout << "[Sender]: new round of start_offset: " << start_offset << endl;
+        //cout << "[Sender]: new round of start_offset: " << start_offset << endl;
 
         //dup_ACK = 0;
         bool pkt_timeout = false;
@@ -133,23 +130,23 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 break;
             }
             else if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
-                byte_read = fread(pkt.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
-                cout << "[Sender]: A - current bytes read: " << byte_read << endl;
+                byte_num = fread(pkt.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
+                cout << "[Sender]: A - current bytes read: " << byte_num << endl;
             } else {
-                byte_read = fread(pkt.data, sizeof(char), BUFFER_SIZE, fp);
-                cout << "[Sender]: B - current bytes read: " << byte_read << endl;
+                byte_num = fread(pkt.data, sizeof(char), BUFFER_SIZE, fp);
+                cout << "[Sender]: B - current bytes read: " << byte_num << endl;
             }
 
 //            cout << "[Sender]: A - current content read: " << packet.content << endl;
 
-            if(byte_read == 0) {
+            if(byte_num == 0) {
                 final_packet_read = true;
                 break;
             }
 
-            byte_xfer_total += byte_read;
+            byte_xfer_total += byte_num;
             pkt.seq_num = seq_num++;
-            pkt.size = byte_read;
+            pkt.size = byte_num;
 //            cout << "[Sender]: current packet size: " << sizeof(packet) << endl;
 
             cwnd.push_back(pkt);
@@ -207,7 +204,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
 
             /* Receiving ACKs */
-            if((byte_recv = recvfrom(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&c_addr, &c_addrlen)) == -1) {
+            if((byte_num = recvfrom(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&c_addr, &c_addrlen)) == -1) {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     // Receiving ACK TIMEOUT. Retransmit...
                     printf("[INFO]: Fail to receive ACK, resending packet %s\n",ack_buffer);

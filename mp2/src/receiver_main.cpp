@@ -53,11 +53,6 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         packet pkt;
         if((byte_num = recvfrom(sockfd, &pkt, sizeof(pkt), 0, (struct sockaddr *)&s_addr, &s_addrlen)) == -1) {
             if(errno == EAGAIN || errno == EWOULDBLOCK) {
-                /*
-                * All files are transmitted.
-                * Sender Timeout!
-                * Let's close the socket : )
-                **/
                 printf("[INFO] Server TIMEOUT Closing Socket\n");
                 break;
             } else {
@@ -65,39 +60,26 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
             }
         }
 
+        printf("[INFO]: seq_num %d\n", seq_num);
         printf("[INFO]: Receive packet %d, %d byte(s)\n", pkt.seq_num, pkt.size);
-        printf("[INFO]: Waiting for seq_num %d\n", seq_num);
-
-        if(n < 0) {
-            fprintf(stderr, "[Receiver] - recv: %s (%d)\n", strerror(errno), errno);
-            cout << "[Receiver] - n: " << n << endl;
-            continue;
-        }
+        
         if (byte_num > 0) {
             ACK ack;
             if(pkt.seq_num == seq_num) {
-                ack.ack_num = pkt.seq_num + 1;
-
-                // mock packet loss
-//                double ran = ((double) rand() / (RAND_MAX));
-//                if(ran < 0.03) {
-//                    cout << "********[Receiver]: ran: " << ran << " **********" << endl;
-//                    cout << "********[Receiver]: PACKET LOSS OCCURRED FOR ACK: " << ack_msg.ack_num << " **********" << endl;
-//                } else {
-//                    n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
-//                }
-
-                n = ::sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen);
+                ack.ack_num = pkt.seq_num+1;
+                if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {
+                    printf("[ERROR]: Fail to send ACK to server\n");
+                }
+                printf("[INFO]: Send ACK %d successfully\n", ack.ack_num);
                 received_file.write(pkt.data, sizeof(char) * pkt.size);
                 seq_num += 1;
             } else {
                 ack.ack_num = seq_num;
-                if( ((double) rand() / (RAND_MAX)) < 0.03) {
-                    cout << "********[Receiver]: PACKET LOSS OCCURRED FOR ACK: " << ack.ack_num << " **********" << endl;
-                } else {
-                    n = ::sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen);
+                if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {
+                    printf("[ERROR]: Fail to send ACK to server\n");
+                    exit(1);
                 }
-                printf("[INFO]: Send ACK %d\n", ack.ack_num);
+                printf("[INFO]: Send ACK %d successfully\n", ack.ack_num);
             }
         } else {
             printf("[INFO]: recvfrom receives byte <= 0\n");

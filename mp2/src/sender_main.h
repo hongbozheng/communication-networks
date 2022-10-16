@@ -43,9 +43,9 @@ int sockfd, slen, n, transferredBytes, ssthreash, dup_ACK;
 socklen_t c_addrlen;
 
 struct Packet {
-    char content[BUFFER_SIZE];
+    char data[BUFFER_SIZE];
     int seq_num;
-    int bytes_read;
+    int size;
 };
 
 struct ACK_MSG {

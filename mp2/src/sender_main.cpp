@@ -99,7 +99,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     transferredBytes = 0;
     int cwnd_size = MSS;
     deque<Packet> cwnd;
-    int current_bytes_read = 0;
+    int byte_read = 0;
     int byte_xfer_total = 0;
     ssthreash = INIT_SSTHRESH;
     int start_offset = 0;
@@ -132,25 +132,24 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 final_packet_read = true;
                 break;
             }
-
-            if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
-                current_bytes_read = fread(packet.content, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
-                cout << "[Sender]: A - current bytes read: " << current_bytes_read << endl;
+            else if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
+                byte_read = fread(packet.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
+                cout << "[Sender]: A - current bytes read: " << byte_read << endl;
             } else {
-                current_bytes_read = fread(packet.content, sizeof(char), BUFFER_SIZE, fp);
-                cout << "[Sender]: B - current bytes read: " << current_bytes_read << endl;
+                byte_read = fread(packet.data, sizeof(char), BUFFER_SIZE, fp);
+                cout << "[Sender]: B - current bytes read: " << byte_read << endl;
             }
 
 //            cout << "[Sender]: A - current content read: " << packet.content << endl;
 
-            if(current_bytes_read == 0) {
+            if(byte_read == 0) {
                 final_packet_read = true;
                 break;
             }
 
-            byte_xfer_total += current_bytes_read;
+            byte_xfer_total += byte_read;
             packet.seq_num = seq_num++;
-            packet.bytes_read = current_bytes_read;
+            packet.size = byte_read;
 //            cout << "[Sender]: current packet size: " << sizeof(packet) << endl;
 
             cwnd.push_back(packet);
@@ -160,17 +159,17 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             break;
         }
 
-        int start_seq_this_round = cwnd.front().seq_num;
-        int end_seq_this_round = cwnd.back().seq_num;
-        cout << "[Sender]: start_seq_this_round: " << start_seq_this_round << endl;
+        int seq_start = cwnd.front().seq_num;
+        int seq_end = cwnd.back().seq_num;
+        printf("[INFO]: start_seq_this_round: \n", seq_start);
 //        cout << "[Sender]: end_seq_this_round: " << end_seq_this_round << endl;
 //        cout << "[Sender]: seq_received size: " << end_seq_this_round-start_seq_this_round+1 << endl;
 
-        bool seq_received[end_seq_this_round-start_seq_this_round+1];
+        bool seq_received[seq_end-seq_start+1];
 //        cout << "[Sender]: init seq_received: " << end_seq_this_round << endl;
 //        cout << "[Sender]: init seq_received size: " << sizeof(seq_received) / sizeof(seq_received[0]) << endl;
 //        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
-        fill(seq_received, seq_received + end_seq_this_round-start_seq_this_round+1, false);
+        fill(seq_received, seq_received + seq_end-seq_start+1, false);
 //        cout << "[Sender]: after seq_received: " << end_seq_this_round << endl;
 //        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
 
@@ -180,7 +179,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         printWindow(cwnd);
 
 
-        for(int j = 0; j < cwnd.size(); j++) {
+        for(int i = 0; i < cwnd.size(); ++i) {
 
             // mock packet loss
 //            if( ((double) rand() / (RAND_MAX)) < 0.05) {
@@ -188,13 +187,13 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 //                continue;
 //            }
 
-            if (sendto(sockfd, &cwnd[j], sizeof(cwnd[j]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
+            if (sendto(sockfd, &cwnd[i], sizeof(cwnd[i]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
                 perror("send");
                 exit(1);
             }
 
 
-            cout << "[Sender]: packet with seq_num " << cwnd[j].seq_num << " is sent!" << endl;
+            printf("[INFO]: packet with seq_num %d is sent successfully\n", cwnd[i].seq_num);
         }
 
         /* Waiting for the ACK */
@@ -220,7 +219,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 }
             } else {
                 cout << "[sender]: ACK RECEIVED: " << ack_msg.ack_num << endl;
-                seq_received[ack_msg.ack_num-1-start_seq_this_round] = true;
+                seq_received[ack_msg.ack_num-1-seq_start] = true;
                 if(ack_freq_map.count(ack_msg.ack_num) == 0) {
                     ack_freq_map[ack_msg.ack_num] = 1;
                 } else {

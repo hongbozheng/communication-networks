@@ -42,11 +42,11 @@ struct sockaddr_in si_other, c_addr;
 int sockfd, slen, n, transferredBytes, ssthreash, dup_ACK;
 socklen_t c_addrlen;
 
-struct Packet {
+typedef struct {
     char data[BUFFER_SIZE];
     int seq_num;
     int size;
-};
+} packet;
 
 typedef struct {
     int ack_num;

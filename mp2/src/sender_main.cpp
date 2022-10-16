@@ -32,7 +32,7 @@ void printArr(bool arr[], int size) {
 }
 
 
-void printWindow(const deque<Packet> v){
+void printWindow(const deque<packet> v){
     printf("[");
     for(unsigned i = 0; i < v.size(); ++i) {
         printf(" %d ",v[i].seq_num);
@@ -98,14 +98,16 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     c_addrlen= sizeof(c_addr);
     transferredBytes = 0;
     int cwnd_size = MSS;
-    deque<Packet> cwnd;
+
     int byte_read = 0;
     int byte_xfer_total = 0;
     ssthreash = INIT_SSTHRESH;
     int start_offset = 0;
     //int i;
     int seq_num = SEQUENCE_NUM_INIT;
+    packet pkt;
     ACK ack;
+    deque<packet> cwnd;
     unordered_map<int, int> ack_freq_map;
     bool final_packet_read = false;
 //    double r = ((double) rand() / (RAND_MAX));
@@ -126,17 +128,15 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         bool pkt_timeout = false;
         bool has_3_dup_ack = false;
         while(cwnd.size() < cwnd_capacity) {
-            Packet packet = Packet();
-
             if(byte_xfer_total >= bytesToTransfer) {
                 final_packet_read = true;
                 break;
             }
             else if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
-                byte_read = fread(packet.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
+                byte_read = fread(pkt.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
                 cout << "[Sender]: A - current bytes read: " << byte_read << endl;
             } else {
-                byte_read = fread(packet.data, sizeof(char), BUFFER_SIZE, fp);
+                byte_read = fread(pkt.data, sizeof(char), BUFFER_SIZE, fp);
                 cout << "[Sender]: B - current bytes read: " << byte_read << endl;
             }
 
@@ -148,11 +148,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
 
             byte_xfer_total += byte_read;
-            packet.seq_num = seq_num++;
-            packet.size = byte_read;
+            pkt.seq_num = seq_num++;
+            pkt.size = byte_read;
 //            cout << "[Sender]: current packet size: " << sizeof(packet) << endl;
 
-            cwnd.push_back(packet);
+            cwnd.push_back(pkt);
         }
 
         if(final_packet_read && cwnd.size() == 0) {

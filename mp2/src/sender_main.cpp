@@ -16,24 +16,6 @@ void diep(char *s) {
     exit(1);
 }
 
-void printArr(int arr[], int size) {
-    printf("[");
-    for(int i = 0; i < size; ++i) {
-        printf(" %d ",arr[i]);
-    }
-    printf(" ]\n");
-}
-
-
-void printWindow(const std::deque<packet> v){
-    printf("[");
-    for(unsigned i = 0; i < v.size(); ++i) {
-        printf(" %d ",v[i].seq_num);
-    }
-    printf(" ]\n");
-
-}
-
 int get_last_ack_seq_num(int arr[], int size) {
     for(int i = size-1; i >= 0; i--) {
         if(arr[i]) {
@@ -165,8 +147,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         int ACK_receive[seq_end-seq_start+1];
         std::fill(ACK_receive, ACK_receive+ seq_end-seq_start+1, 0);
 
-        printf("[INFO]: packets to be sent this round: ");
-        printWindow(pkt_q);
         for(int i = 0; i < pkt_q.size(); ++i) {
             if (sendto(sockfd, &pkt_q[i], sizeof(pkt_q[i]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
                 printf("[ERROR]: Fail to send packet to client\n");
@@ -205,8 +185,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
 
         int last_ACK_seq_num = get_last_ack_seq_num(ACK_receive, sizeof ACK_receive/sizeof ACK_receive[0]);
-        printf("[INFO]: seq_received this round: ");
-        printArr(ACK_receive, sizeof(ACK_receive) / sizeof(ACK_receive[0]));
         printf("[INFO]: Last ACK seq num %d, Starting removing from pkt_q\n", last_ACK_seq_num);
         if(last_ACK_seq_num != -1) {
             for(int i = 0; i <= last_ACK_seq_num; ++i) {

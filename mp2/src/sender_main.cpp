@@ -218,7 +218,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                     printf("[ERROR]: recvfrom fail\n");
                 }
             } else {
-                printf("[INFO]: ACK RECEIVED %d\n: ", ack.seq_num);
+                printf("[INFO]: ACK RECEIVED %d\n", ack.seq_num);
                 ACK_receive[ack.seq_num-seq_start-1] = true;
                 if(ack_freq_map.count(ack.seq_num) == 0) {
                     ack_freq_map[ack.seq_num] = 1;
@@ -250,7 +250,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         printArr(ACK_receive, sizeof(ACK_receive) / sizeof(ACK_receive[0]));
         cout << "[sender]: lask_acked_seq_index: " << lask_acked_seq_index << endl;
         if(lask_acked_seq_index != -1) {
-            for(int j = 0; j <= lask_acked_seq_index; j++) {
+            for(int i = 0; i <= lask_acked_seq_index; ++i) {
                 cwnd.pop_front();
             }
         }

@@ -101,8 +101,8 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 	/* Send data and receive acknowledgements on s */
     int cwnd = MSS;
     int ssthreash = INIT_SSTHRESH;
+    int seq_num = 0;
     int byte_xfer_total = 0;
-    int seq_num = SEQUENCE_NUM_INIT;
     int byte_num;
     bool final_packet_read = false;
     packet pkt;

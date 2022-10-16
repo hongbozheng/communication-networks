@@ -33,7 +33,6 @@
 #define SLOW_START 0
 #define CONGESTION_AVOIDANCE 1
 #define FAST_RECOVERY 2
-#define SEQUENCE_NUM_INIT 0
 
 typedef struct {
     char data[BUFFER_SIZE];
@@ -45,8 +44,6 @@ typedef struct {
     int seq_num;
 } ACK;
 
-char read_buffer[BUFFER_SIZE];
-char ack_buffer[3];
 struct sockaddr_in si_other, c_addr;                                                                
 socklen_t c_addrlen = sizeof c_addr;
 const int MSS = sizeof(char)*BUFFER_SIZE;

@@ -25,7 +25,7 @@
 #include <errno.h>
 
 #define TIMEOUT         1
-#define DATA_BUF_SIZE   1200
+#define DATA_BUF_SIZE   2500
 
 typedef struct {
     char data[DATA_BUF_SIZE];

@@ -99,17 +99,13 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     int seq_num = 0;
     int byte_xfer_total = 0;
     int byte_num;
-    bool final_packet_read = false;
+    bool xfer_fin = false;
     packet pkt;
     ACK ack;
     std::deque<packet> pkt_q;
     std::unordered_map<int, int> ack_freq_map;
 
     while(1) {
-        if(final_packet_read && pkt_q.size() == 0) {
-            break;
-        }
-
         printf("--------------------------------------------------\n");
         int pkt_num_max = cwnd_byte/MSS;
         printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
@@ -119,7 +115,12 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         bool pkt_timeout = false;
         bool ack_3 = false;
 
-        while((byte_xfer_total < bytesToTransfer) && (pkt_q.size() < pkt_num_max)) {
+        while((pkt_q.size() < pkt_num_max)) {
+            if(byte_xfer_total >= bytesToTransfer){
+                xfer_fin = true;
+                break;
+            }
+
             if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
                 byte_num = fread(pkt.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
             } else {
@@ -127,7 +128,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
 
             if(byte_num == 0) {
-                final_packet_read = true;
+                xfer_fin = true;
                 break;
             }
 
@@ -135,6 +136,10 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             pkt.seq_num = seq_num++;
             pkt.size = byte_num;
             pkt_q.push_back(pkt);
+        }
+
+        if(xfer_fin && pkt_q.size() == 0) {
+            break;
         }
 
         int seq_start = pkt_q.front().seq_num;

@@ -49,8 +49,8 @@ char read_buffer[BUFFER_SIZE];
 char ack_buffer[3];
 struct sockaddr_in si_other, c_addr;                                                                
 socklen_t c_addrlen = sizeof c_addr;
-int sockfd, slen, n;
 const int MSS = sizeof(char)*BUFFER_SIZE;
+int sockfd, slen, n;
 
 /*
 //packet structure used for transfering

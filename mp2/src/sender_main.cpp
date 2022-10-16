@@ -1,8 +1,12 @@
-/* 
- * File:   sender_main.c
- * Author: 
+/**
+ * FILENAME: sender_main.h
  *
- * Created on 
+ * DESCRIPTION:
+ *
+ * DATE: Saturday, Oct 8th, 2022
+ *
+ * AUTHOR:
+ *
  */
 
 #include "sender_main.h"
@@ -86,7 +90,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         exit(1);
     }
 
-    /* Set timeout for socket */
+    /* set timeout for socket */
     struct timeval tv;
     tv.tv_sec = TIMEOUT_SECONDS;
     tv.tv_usec = 0;
@@ -106,12 +110,10 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     deque<packet> pkt_q;
     unordered_map<int, int> ack_freq_map;
 
-//    double r = ((double) rand() / (RAND_MAX));
-
     while(1) {
         printf("--------------------------------------------------------\n");
         /* Read bytes from the file and copy it to the current window */
-        int cwnd_capacity = cwnd / MSS;
+        int pkt_num = cwnd / MSS;
         cout << "[Sender]: new round of cwnd_size: " << cwnd << endl;
         cout << "[Sender]: new round of ssthreash: " << ssthreash << endl;
         cout << "[Sender]: new round of MSS: " << MSS << endl;
@@ -121,7 +123,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         //dup_ACK = 0;
         bool pkt_timeout = false;
         bool ack_3 = false;
-        while(pkt_q.size() < cwnd_capacity) {
+        while(pkt_q.size() < pkt_num) {
             if(byte_xfer_total >= bytesToTransfer) {
                 final_packet_read = true;
                 break;

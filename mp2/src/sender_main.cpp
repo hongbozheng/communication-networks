@@ -149,7 +149,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
         for(int i = 0; i < pkt_q.size(); ++i) {
             if (sendto(sockfd, &pkt_q[i], sizeof(pkt_q[i]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
-                printf("[ERROR]: Fail to send packet to client\n");
+                printf("[ERROR]: Fail to send packet %d to client\n", pkt_q[i].seq_num);
                 exit(1);
             }
             printf("[INFO]: Packet seq_num %d is sent successfully\n", pkt_q[i].seq_num);

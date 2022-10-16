@@ -5,49 +5,9 @@
  * Created on 
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <iostream>
-#include <errno.h>
-#include <chrono>
-#include <unordered_map>
-#include <deque>
-#include <algorithm>
-
-
-#define BUFFER_SIZE 1200
-#define INIT_SSTHRESH 64000
-#define TIMEOUT_SECONDS 1
-#define SLOW_START 0
-#define CONGESTION_AVOIDANCE 1
-#define FAST_RECOVERY 2
-#define SEQUENCE_NUM_INIT 0
-
+#include "sender_main.h"
 
 using namespace std;
-
-char read_buffer[BUFFER_SIZE];
-char ack_buffer[3];
-
-struct sockaddr_in si_other, c_addr;
-int sockfd, slen, n, transferredBytes, dupACKcount, ssthreash;
-socklen_t c_addrlen;
-
-struct Packet {
-    char content[BUFFER_SIZE];
-    int seq_num;
-    int bytes_read;
-};
-
-struct ACK_MSG {
-    int ack_num;
-};
 
 void diep(char *s) {
     perror(s);

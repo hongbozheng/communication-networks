@@ -1,111 +1,155 @@
-/**
- * FILENAME: receiver_main.c
- * 
- * DESCRIPTION:
+/* 
+ * File:   receiver_main.c
+ * Author: 
  *
- * DATE: Saturday, Oct 8th, 2022
- *
- * AUTHOR:
- *
+ * Created on
  */
 
-#include "receiver_main.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <fstream>
+#include <iostream>
+#include <errno.h>
 
-//struct sockaddr_in si_me, si_other;
-//int s, slen;
+#define TIMEOUT_SECONDS 1
+#define MAXDATASIZE 1100 // max number of bytes we can get at once
+#define CONTENT_BUFFER_SIZE 1200
+
+struct Packet {
+    char content[CONTENT_BUFFER_SIZE];
+    int seq_num;
+    int bytes_read;
+};
+
+struct ACK_MSG {
+    int ack_num;
+};
+
+using namespace std;
+struct timeval tv;
+struct sockaddr_in si_me, si_other, from;
+int sockfd, slen, n;
+socklen_t fromlen;
 
 void diep(char *s) {
     perror(s);
     exit(1);
 }
 
-void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
-    
-    slen = sizeof (si_other);
 
-    if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+string convertToString(char* chars, int size) {
+    string s(chars);
+    // if size x is passed in, we return its first x chars
+    if(size != -1) {
+        return s.substr(0, size);
+    }
+    return s;
+}
+
+void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
+
+    ofstream received_file;
+    int numbytesReceived;
+
+    slen = sizeof (si_other);
+    fromlen  = sizeof(struct sockaddr_in);
+
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
         diep("socket");
 
     memset((char *) &si_me, 0, sizeof (si_me));
     si_me.sin_family = AF_INET;
     si_me.sin_port = htons(myUDPport);
     si_me.sin_addr.s_addr = htonl(INADDR_ANY);
-    printf("[INFO]: Now binding\n");
-    if (bind(s, (struct sockaddr*) &si_me, sizeof (si_me)) == -1)
-        diep("[ERROR]: bind");
+    printf("Now binding\n");
+    if (bind(sockfd, (struct sockaddr*) &si_me, sizeof (si_me)) == -1)
+        diep("bind");
 
-	/* Now receive data and send acknowledgements */ 
-    FILE* fp = fopen(destinationFile,"wb");
+    cout << "[Receiver] - Receiving IP used: " << inet_ntoa(si_me.sin_addr) << endl;
+    cout << "[Receiver] - Receiving port used: " << htons(si_me.sin_port) << endl;
 
-    char file_buf [BUF_SIZE];
+    /* Set timeout for socket */
+    tv.tv_sec = TIMEOUT_SECONDS * 3;
+    tv.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
-    int next_ack= 0;
-    int ack[PKT_BUF_SIZE];
-    int data_size [PKT_BUF_SIZE];
-    for (int i = 0; i < PKT_BUF_SIZE; ++i){
-        ack[i]=0;
-        data_size[i]=DATA_SIZE;
-    }
+    /* Now receive data and send acknowledgements */
+    string destinationFileStr = destinationFile;
+    received_file.open(destinationFileStr.c_str(), ios::binary);
+    fromlen = sizeof(from);
+    int waiting_seq_num = 0;
 
-    int idx = 0;
-    int recv_byte;
-    packet pkt;
+    while (true) {
 
-    while(1){
-        recv_byte = recvfrom(s, buf, sizeof(packet), 0, (struct sockaddr*)&sender_addr, &addrlen);
-        if (recv_byte <= 0) {
-            fprintf(stderr, "Connection closed\n");
-            exit(2);
+        cout << "--------------------------------------------------------" << endl;
+        Packet buf;
+        numbytesReceived = ::recvfrom(sockfd, &buf, sizeof(buf), 0, (struct sockaddr *)&from, &fromlen);
+
+
+        if(errno == EAGAIN || errno == EWOULDBLOCK) {
+            /*
+             * All files are transmitted.
+             * Sender Timeout!
+             * Let's close the socket : )
+             * */
+            cout << "[Receiver] - Sender TIMEOUT! Socket closed! " << endl;
+            break;
         }
-        memcpy(&pkt,buf,sizeof(packet));
-        printf("[INFO]: Receive packet %d, Type %d\n", pkt.seq_num, pkt.msg_type);
-        
-        switch(pkt.msg_type) {
-            case DATA:
-                if(pkt.seq_num == next_ack){
-                    memcpy(&file_buf[idx*DATA_SIZE], &pkt.data , pkt.data_size);
-                    fwrite(&file_buf[idx*DATA_SIZE], sizeof(char), pkt.data_size, fp);
-                    printf("[INFO]: Write packet %d to file\n", pkt.seq_num);
-                    ++next_ack;
-                    idx = (idx+1)%PKT_BUF_SIZE;
-                    while(ack[idx] == 1) {
-                        fwrite(&file_buf[idx*DATA_SIZE], sizeof(char), data_size[idx], fp);
-                        printf("[INFO]: Write packet %d to file\n", idx);
-                        ack[idx] = 0;
-                        idx = (idx+1)%PKT_BUF_SIZE;
-                        ++next_ack;
-                    }
-                } else if(pkt.seq_num > next_ack) {
-                    int fut_idx = (idx + pkt.seq_num - next_ack)%PKT_BUF_SIZE;
-                    memcpy(&file_buf[fut_idx*DATA_SIZE], &pkt.data, pkt.data_size);
-                    ack[fut_idx] = 1;
-                    data_size[fut_idx] = pkt.data_size;
+
+        cout << "[Receiver] - current received seq_num: " << buf.seq_num << endl;
+        cout << "[Receiver] - numbytesReceived: " << buf.bytes_read << endl;
+//        cout << "[Receiver] - buf.content:{" << buf.content << "}" << endl;
+        cout << "[Receiver] - current waiting_seq_num: " << waiting_seq_num << "" << endl;
+
+        if(n < 0) {
+            fprintf(stderr, "[Receiver] - recv: %s (%d)\n", strerror(errno), errno);
+            cout << "[Receiver] - n: " << n << endl;
+            continue;
+        }
+        if (numbytesReceived > 0) {
+            ACK_MSG ack_msg;
+            if(buf.seq_num == waiting_seq_num) {
+                ack_msg.ack_num = buf.seq_num + 1;
+
+                // mock packet loss
+//                double ran = ((double) rand() / (RAND_MAX));
+//                if(ran < 0.03) {
+//                    cout << "********[Receiver]: ran: " << ran << " **********" << endl;
+//                    cout << "********[Receiver]: PACKET LOSS OCCURRED FOR ACK: " << ack_msg.ack_num << " **********" << endl;
+//                } else {
+//                    n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
+//                }
+
+                n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
+                received_file.write(buf.content, sizeof(char) * buf.bytes_read);
+                waiting_seq_num += 1;
+            } else {
+                ack_msg.ack_num = waiting_seq_num;
+                if( ((double) rand() / (RAND_MAX)) < 0.03) {
+                    cout << "********[Receiver]: PACKET LOSS OCCURRED FOR ACK: " << ack_msg.ack_num << " **********" << endl;
+                } else {
+                    n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
                 }
-                pkt.data_size = 0;
-                pkt.msg_type = ACK;
-                pkt.ack_num = next_ack;
-                memcpy(buf, &pkt, sizeof(packet));
-                sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
-                printf("[INFO]: Sent ACK %d\n", pkt.ack_num);
-                break;
-
-            case FIN:
-                pkt.data_size = 0;
-                pkt.ack_num = next_ack;
-                pkt.msg_type = FIN_ACK;
-                memcpy(buf, &pkt, sizeof(packet));
-                sendto(s, buf, sizeof(packet), 0, (struct sockaddr *)&sender_addr, addrlen);
-                goto finish;
-
-            default:
-                break;
+//                n = ::sendto(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &from, fromlen);
+                cout << "[Receiver] - ack " << ack_msg.ack_num << " sent!" << endl;
+            }
+            // else, drop the packet
+        } else {
+            fprintf(stderr, "[Receiver] - numbytesReceived < 0: %s (%d)\n", strerror(errno), errno);
         }
     }
 
-finish:
-    close(s);
-	printf("[INFO]: File %s received\n", destinationFile);
+
+    close(sockfd);
+    printf("%s received.", destinationFile);
     return;
+
 }
 
 /*
@@ -116,9 +160,10 @@ int main(int argc, char** argv) {
     unsigned short int udpPort;
 
     if (argc != 3) {
-        fprintf(stderr, "[USAGE]: %s UDP_port filename_to_write\n\n", argv[0]);
+        fprintf(stderr, "usage: %s UDP_port filename_to_write\n\n", argv[0]);
         exit(1);
     }
+
 
     udpPort = (unsigned short int) atoi(argv[1]);
 

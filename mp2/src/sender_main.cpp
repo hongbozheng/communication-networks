@@ -1,306 +1,342 @@
-/** 
- * FILENAME: sender_main.c
- * 
- * DESCRIPTION:
+/* 
+ * File:   sender_main.c
+ * Author: 
  *
- * DATE: Saturday, Oct 8th, 2022
- *
- * AUTHOR:
- *
+ * Created on 
  */
 
-#include "sender_main.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <iostream>
+#include <errno.h>
+#include <chrono>
+#include <unordered_map>
+#include <deque>
+#include <algorithm>
+
+
+#define BUFFER_SIZE 1200
+#define INIT_SSTHRESH 64000
+#define TIMEOUT_SECONDS 1
+#define SLOW_START 0
+#define CONGESTION_AVOIDANCE 1
+#define FAST_RECOVERY 2
+#define SEQUENCE_NUM_INIT 0
+
+
+using namespace std;
+
+char read_buffer[BUFFER_SIZE];
+char ack_buffer[3];
+
+struct sockaddr_in si_other, c_addr;
+int sockfd, slen, n, transferredBytes, dupACKcount, ssthreash;
+socklen_t c_addrlen;
+
+struct Packet {
+    char content[BUFFER_SIZE];
+    int seq_num;
+    int bytes_read;
+};
+
+struct ACK_MSG {
+    int ack_num;
+};
 
 void diep(char *s) {
     perror(s);
     exit(1);
 }
 
-int get_socket(char * hostname, unsigned short int hostUDPport) {
-    int rv, sockfd;
-    char port[10];
-    sprintf(port, "%d", hostUDPport);
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    memset(&recvinfo,0,sizeof recvinfo);
-    if ((rv = getaddrinfo(hostname, port, &hints, &recvinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
+string convertToString(char* chars, int size) {
+    string s(chars);
+    // if size x is passed in, we return its first x chars
+    if(size != -1) {
+        return s.substr(size);
     }
-
-    // loop through all the results and bind to the first we can
-    for(p = recvinfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-            printf("[ERROR]: Cannot open the socket\n");
-            continue;
-        }
-        break;
-    }
-    if (p == NULL)  {
-        printf("[ERROR]: Server failed to bind\n");
-        exit(1);
-    }
-
-    return sockfd;
+    return s;
 }
 
-void set_socket_timeout(int sockfd){
-    struct timeval TIMEOUT;
-    TIMEOUT.tv_sec = 0;
-    TIMEOUT.tv_usec = 2*RTT;
-    if (setsockopt(sockfd, SOL_SOCKET,SO_RCVTIMEO,&TIMEOUT,sizeof(TIMEOUT)) == -1) {
-        printf("[ERROR]: Failed to set socket timeout\n");
-        return;
+void printArr(bool arr[], int size) {
+    printf("[");
+    for(int i = 0; i < size; ++i) {
+        printf(" %d ",arr[i]);
     }
+    printf(" ]\n");
 }
 
-void create_pkt_queue(int pkt_number, FILE *fp) {
-    if (pkt_number == 0) return;
-    int pkt_data_byte;
-    char buf[MSS];
-    
-    for (int i = 0; byte_to_xfer!= 0 && i < pkt_number; ++i) {
-        packet pkt;
-        if(byte_to_xfer >= MSS) {
-            pkt_data_byte = MSS;
-        } else {
-            pkt_data_byte = byte_to_xfer;
-        }
 
-        int byte_read = fread(buf, sizeof(char), pkt_data_byte, fp);
-        if (byte_read > 0) {
-            pkt.data_size = byte_read;
-            pkt.msg_type = DATA;
-            pkt.seq_num = seq_number;
-            memcpy(pkt.data, &buf, sizeof(char)*pkt_data_byte);
-            pkt_queue.push(pkt);
-            seq_number = (seq_number + 1) % MAX_SEQ_NUMBER;
-        } else {
-            printf("[INFO]: Reach EOF, fread 0 byte\n");
-        }
-        byte_to_xfer -= byte_read;
+void printWindow(const deque<Packet> v){
+    printf("[");
+    for(unsigned i = 0; i < v.size(); ++i) {
+        printf(" %d ",v[i].seq_num);
     }
+    printf(" ]\n");
+
 }
 
-int send_pkt(int sockfd) {
-    if(pkt_queue.empty()) {
-        printf("[INFO]: No packet(s) need to be sent\n");
-        return 0;
-    }
-    
-    int send_pkt_num  = (cwnd - ack_queue.size()) <= pkt_queue.size() ? cwnd - ack_queue.size() : pkt_queue.size();
-    int byte_send;
-    
-    if(cwnd - ack_queue.size() < 1) {
-        memcpy(pkt_buf, &ack_queue.front(), sizeof(packet));
-        if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            printf("Fail to send %d pkt\n", ack_queue.front().seq_num);
-            exit(2);
+int get_lask_acked_seq(bool arr[], int size) {
+    for(int i = size-1; i >= 0; i--) {
+        if(arr[i]) {
+            return i;
         }
-        printf("[INFO]: Send packet %d, cwnd = %f\n", ack_queue.front().seq_num, cwnd);
-        return 0;
     }
-
-    for(int i = 0; i < send_pkt_num; ++i) {
-        memcpy(pkt_buf, &pkt_queue.front(), sizeof(packet));
-        if((byte_send = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1){
-            printf("Fail to send packet %d\n", pkt_queue.front().seq_num);
-            exit(2);
-        }
-        printf("[INFO]: Sent packet %d successfully, cwnd = %f\n", pkt_queue.front().seq_num, cwnd);
-        ack_queue.push(pkt_queue.front());
-        pkt_queue.pop();
-    }
-    return send_pkt_num;
+    return -1;
 }
 
-void state_ctrl(bool new_ack, bool timeout) {
-    switch (state) {
-        case SLOW_START:
-            if (timeout) {
-                ssthread = cwnd/2.0;
-                cwnd = 1;
-                dup_ack_cnt = 0;
-                break;
-            }
-            if (new_ack) {
-                dup_ack_cnt = 0;
-                cwnd = (cwnd+1 >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+1;
-            } else {
-                ++dup_ack_cnt;
-            }
-            if (cwnd >= ssthread) {
-                printf("[INFO]: SLOW_START ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
-                state = CONGESTION_AVOIDANCE;
-            }
-            break;
-        case CONGESTION_AVOIDANCE:
-            if (timeout) {
-                ssthread = cwnd/2.0;
-                cwnd = 1;
-                dup_ack_cnt= 0;
-                printf("[INFO]: CONGESTION_AVOIDANCE ---> SLOW_START, cwnd = %f\n", cwnd);
-                state = SLOW_START;
-                break;
-            }
-            if (new_ack) {
-                cwnd = (cwnd+ 1.0/cwnd >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+ 1.0/cwnd;
-                dup_ack_cnt = 0;
-            } else {
-                ++dup_ack_cnt;
-            }
-            break;
-        case FAST_RECOVERY:
-            if (timeout) {
-                ssthread = cwnd/2.0;
-                cwnd = 1;
-                dup_ack_cnt = 0;
-                printf("[INFO]: FAST_RECOVERY ---> SLOW_START, cwnd = %f\n", cwnd);
-                state = SLOW_START;
-                break;
-            }
-            if (new_ack) {
-                cwnd = ssthread;
-                dup_ack_cnt = 0;
-                printf("[INFO]: FAST_RECOVERY ---> CONGESTION_AVOIDANCE, cwnd = %f\n", cwnd);
-                state = CONGESTION_AVOIDANCE;
-            } else {
-                cwnd = (cwnd+1 >= BUFFER_SIZE) ? BUFFER_SIZE-1 : cwnd+1;
-            }
-            break;
-        default:
-            break;
-    }
-}
 
-void fin_ack(int sockfd) {
-    packet pkt;
-    int byte_num;
-
-    while(1) {
-        pkt.data_size = 0;
-        pkt.seq_num = seq_number;
-        pkt.msg_type = FIN;
-        memcpy(pkt_buf, &pkt, sizeof(packet));
-        if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1){
-            printf("[ERROR]: Failed to send FIN to receiver\n");
-            exit(2);
-        }
-        if ((byte_num = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, NULL, NULL)) == -1) {
-            printf("[ERROR]: Failed to receive ACK from receiver\n");
-            exit(2);
-        }
-        memcpy(&pkt, pkt_buf, sizeof(packet));
-        if (pkt.msg_type == FIN_ACK) {
-            printf("[INFO]: Receive the FIN_ACK\n");
-            break;
+int get_first_absent_seq(bool arr[]) {
+    for(int i = 0; i < sizeof(arr) / sizeof(arr[0]); i++) {
+        if(!arr[i]) {
+            return i;
         }
     }
+    return -1;
 }
 
 void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* filename, unsigned long long int bytesToTransfer) {
-    /*
-    //Open the file
+    
     FILE *fp;
     fp = fopen(filename, "rb");
+    printf("[INFO]: Open file %s\n",filename);
     if (fp == NULL) {
-        printf("Could not open file to send.");
+        printf("[ERROR]: Could not open file %s to send\n",filename);
         exit(1);
     }
 
-	// Determine how many bytes to transferS
+	/* Determine how many bytes to transfer */
 
     slen = sizeof (si_other);
 
-    if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         diep("socket");
+    }
 
     memset((char *) &si_other, 0, sizeof (si_other));
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons(hostUDPport);
     if (inet_aton(hostname, &si_other.sin_addr) == 0) {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
-    }*/
-
-
-	/* Send data and receive acknowledgements on s*/
-
-	int sockfd = get_socket(hostname, hostUDPport);
-    set_socket_timeout(sockfd);
-    
-    FILE *fp = fopen(filename, "rb");
-    if(fp == NULL) {
-        printf("Could not open file to send.");
+        printf("[ERROR]: inet_aton() failed\n");
         exit(1);
     }
-    byte_to_xfer = bytesToTransfer;
 
-    unsigned long long int pkt_total = (unsigned long long int) ceil((float)byte_to_xfer/ MSS);
-    printf("[INFO]: %llu packet(s) need to be sent\n", pkt_total);
+    /* Set timeout for socket */
+    struct timeval tv;
+    tv.tv_sec = TIMEOUT_SECONDS;
+    tv.tv_usec = 0;
+    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv) == -1) {
+        printf("[ERROR]: Failed to set socket timeout\n");
+    }
 
-    create_pkt_queue(BUFFER_SIZE, fp);
-    
-    int send_pkt_num;
-    send_pkt_num = send_pkt(sockfd);
-    create_pkt_queue(send_pkt_num, fp);
+	/* Send data and receive acknowledgements on s */
+    c_addrlen= sizeof(c_addr);
+    transferredBytes = 0;
+    int MSS = sizeof(char) * BUFFER_SIZE;
+    int cwnd_size = MSS;
+    deque<Packet> cwnd;
+    int current_bytes_read = 0;
+    int cumulative_bytes_read = 0;
+    ssthreash = INIT_SSTHRESH;
+    int start_offset = 0;
+    int i;
+    int seq_num = SEQUENCE_NUM_INIT;
+    struct ACK_MSG ack_msg;
+    unordered_map<int, int> ack_freq_map;
+    bool final_packet_read = false;
+//    double r = ((double) rand() / (RAND_MAX));
 
-    int byte_num;
+    while(true) {
+        cout << "--------------------------------------------------------" << endl;
+        /* Read bytes from the file and copy it to the current window */
+        int cwnd_capacity = cwnd_size / MSS;
+        cout << "[Sender]: new round of cwnd_size: " << cwnd_size << endl;
+        cout << "[Sender]: new round of ssthreash: " << ssthreash << endl;
+        cout << "[Sender]: new round of MSS: " << MSS << endl;
+        cout << "[Sender]: new round of cwnd: " << endl;
+        cout << "[Sender]: new round of start_offset: " << start_offset << endl;
 
-    while(!pkt_queue.empty() || !ack_queue.empty()) {
-        if((byte_num = recvfrom(sockfd, pkt_buf, sizeof(packet), 0, NULL, NULL)) == -1) {
-            if (errno != EAGAIN || errno != EWOULDBLOCK) {
-                printf("[INFO]: Fail to receive main ACK\n");
-                exit(2);
+        dupACKcount = 0;
+        bool has_timeout_packet = false;
+        bool has_3_dup_ack = false;
+        while(cwnd.size() < cwnd_capacity) {
+            Packet packet = Packet();
+
+            if(cumulative_bytes_read >= bytesToTransfer) {
+                final_packet_read = true;
+                break;
             }
-            printf("[INFO]: Timeout, resend packet %d\n", ack_queue.front().seq_num);
-            memcpy(pkt_buf, &ack_queue.front(), sizeof(packet));
-            if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen))== -1) {
-                printf("Fail to send %d pkt\n", ack_queue.front().seq_num);
-                exit(2);
+
+            if(cumulative_bytes_read + BUFFER_SIZE > bytesToTransfer) {
+                current_bytes_read = fread(packet.content, sizeof(char), bytesToTransfer - cumulative_bytes_read, fp);
+                cout << "[Sender]: A - current bytes read: " << current_bytes_read << endl;
+            } else {
+                current_bytes_read = fread(packet.content, sizeof(char), BUFFER_SIZE, fp);
+                cout << "[Sender]: B - current bytes read: " << current_bytes_read << endl;
             }
-            state_ctrl(false, true);
-        } else {
-            packet pkt;
-            memcpy(&pkt, pkt_buf, sizeof(packet));
-            if (pkt.msg_type == ACK) {
-                printf("[INFO]: Receive ACK from receiver\n");
-                printf("        Receiver receives packet %d successfully\n", pkt.ack_num);
-                if(pkt.ack_num == ack_queue.front().seq_num) {
-                    state_ctrl(false, false);
-                    if(dup_ack_cnt == 3) {
-                        ssthread = cwnd/2.0;
-                        cwnd = ssthread + 3;
-                        dup_ack_cnt = 0;
-                        state = FAST_RECOVERY;
-                        printf("[INFO]: Receive 3 duplicate ACK ---> FAST_RECOVERY, cwnd = %f\n", cwnd);
-                        memcpy(pkt_buf, &ack_queue.front(), sizeof(packet));
-                        if((byte_num = sendto(sockfd, pkt_buf, sizeof(packet), 0, p->ai_addr, p->ai_addrlen)) == -1) {
-                            printf("Fail to resend packet %d\n", ack_queue.front().seq_num);
-                            exit(2);
-                        }
-                        printf("[INFO]: Receive 3 duplicate ACK, resend packet %d\n", ack_queue.front().seq_num);
+
+//            cout << "[Sender]: A - current content read: " << packet.content << endl;
+
+            if(current_bytes_read == 0) {
+                final_packet_read = true;
+                break;
+            }
+
+            cumulative_bytes_read += current_bytes_read;
+            packet.seq_num = seq_num++;
+            packet.bytes_read = current_bytes_read;
+//            cout << "[Sender]: current packet size: " << sizeof(packet) << endl;
+
+            cwnd.push_back(packet);
+        }
+
+        if(final_packet_read && cwnd.size() == 0) {
+            break;
+        }
+
+        int start_seq_this_round = cwnd.front().seq_num;
+        int end_seq_this_round = cwnd.back().seq_num;
+        cout << "[Sender]: start_seq_this_round: " << start_seq_this_round << endl;
+//        cout << "[Sender]: end_seq_this_round: " << end_seq_this_round << endl;
+//        cout << "[Sender]: seq_received size: " << end_seq_this_round-start_seq_this_round+1 << endl;
+
+        bool seq_received[end_seq_this_round-start_seq_this_round+1];
+//        cout << "[Sender]: init seq_received: " << end_seq_this_round << endl;
+//        cout << "[Sender]: init seq_received size: " << sizeof(seq_received) / sizeof(seq_received[0]) << endl;
+//        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
+        fill(seq_received, seq_received + end_seq_this_round-start_seq_this_round+1, false);
+//        cout << "[Sender]: after seq_received: " << end_seq_this_round << endl;
+//        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
+
+        /* Sending file to the receiver */
+
+        cout << "[Sender]: packets to be sent this round: " << endl;
+        printWindow(cwnd);
+
+
+        for(int j = 0; j < cwnd.size(); j++) {
+
+            // mock packet loss
+//            if( ((double) rand() / (RAND_MAX)) < 0.05) {
+//                cout << "********[Sender]: PACKET LOSS OCCURRED FOR seq_num: " << cwnd[j].seq_num << " **********" << endl;
+//                continue;
+//            }
+
+            if (sendto(sockfd, &cwnd[j], sizeof(cwnd[j]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
+                perror("send");
+                exit(1);
+            }
+
+
+            cout << "[Sender]: packet with seq_num " << cwnd[j].seq_num << " is sent!" << endl;
+        }
+
+        /* Waiting for the ACK */
+        auto start = std::chrono::system_clock::now();
+        for(int j = 0; j < cwnd.size(); j++) {
+            /* Timeout the for loop when the time is out */
+            auto end = std::chrono::system_clock::now();
+            if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count() >= TIMEOUT_SECONDS) {
+                cout << "[sender]: this round of ack waiting is timeout! " << endl;
+                break;
+            }
+
+            /* Receiving ACKs */
+            n = recvfrom(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&c_addr, &c_addrlen);
+            if(n < 0) {
+                if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                    // Receiving ACK TIMEOUT. Retransmit...
+                    cout << "[sender]: ack is missing.. resending... " << ack_buffer << endl;
+                    has_timeout_packet = true;
+                } else {
+                    // Other errors occurred. Error msg printed.
+                    fprintf(stderr, "[Receiver] - recv: %s (%d)\n", strerror(errno), errno);
+                    diep("[sender] - recvfrom receiver error..");
+                }
+            } else {
+                cout << "[sender]: ACK RECEIVED: " << ack_msg.ack_num << endl;
+                seq_received[ack_msg.ack_num-1-start_seq_this_round] = true;
+                if(ack_freq_map.count(ack_msg.ack_num) == 0) {
+                    ack_freq_map[ack_msg.ack_num] = 1;
+                } else {
+                    ack_freq_map[ack_msg.ack_num] += 1;
+                    if(ack_freq_map[ack_msg.ack_num] == 3) {
+                        has_3_dup_ack = true;
                     }
-                } else if(pkt.ack_num > ack_queue.front().seq_num) {
-                    while(!ack_queue.empty() && ack_queue.front().seq_num < pkt.ack_num) {
-                        state_ctrl(true, false);
-                        ack_queue.pop();
-                    }
-                    send_pkt_num = send_pkt(sockfd);
-                    create_pkt_queue(send_pkt_num, fp);
                 }
             }
         }
-        printf("----------------------------------------------------------------------\n");
+
+        /* Prep for the next round */
+//        int first_absent_seq_index = get_first_absent_seq(seq_received);
+//        cout << "[sender]: seq_received this round: " << endl;
+//        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
+//        cout << "[sender]: first_absent_seq_index: " << first_absent_seq_index << endl;
+//        if(first_absent_seq_index != -1) {
+//            for(int j = 0; j < first_absent_seq_index; j++) {
+//                cwnd.pop_front();
+//            }
+//        } else {
+//            // no packet loss this round
+//            cwnd.clear();
+//        }
+
+        int lask_acked_seq_index = get_lask_acked_seq(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
+        cout << "[sender]: seq_received this round: " << endl;
+        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
+        cout << "[sender]: lask_acked_seq_index: " << lask_acked_seq_index << endl;
+        if(lask_acked_seq_index != -1) {
+            for(int j = 0; j <= lask_acked_seq_index; j++) {
+                cwnd.pop_front();
+            }
+        }
+
+        if(has_timeout_packet) {
+            ssthreash = cwnd_size / 2;
+            cwnd_size = MSS;
+            cout << "[sender]: This round has timeout packet: " << ack_msg.ack_num << endl;
+            cout << "[sender]: current ssthreash: " << ssthreash << endl;
+            cout << "[sender]: current MSS: " << MSS << endl;
+            cout << "[sender]: current cwnd_size: " << cwnd_size << endl;
+            cout << "[sender]: current test: " << (1000/1000) << endl;
+            cout << "[sender]: current cwnd window size: " << (cwnd_size / MSS) << endl;
+        } else if(has_3_dup_ack) {
+            ssthreash = cwnd_size / 2;
+            cwnd_size = ssthreash + 3 * MSS;
+            cout << "[sender]: This round has 3 duplicate acks: " << ack_msg.ack_num << endl;
+            cout << "[sender]: current ssthreash: " << ssthreash << endl;
+            cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
+        } else {
+            if(cwnd_size >= ssthreash) {
+                cwnd_size += MSS;
+                cout << "[sender]: Congestion Control Phase" << endl;
+                cout << "[sender]: current ssthreash: " << ssthreash << endl;
+                cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
+            } else {
+                cout << "[sender]: Slow Start Phase" << endl;
+                if(cwnd_size * 2 >= ssthreash) {
+                    cwnd_size = ssthreash;
+                } else {
+                    cwnd_size *= 2;
+                }
+                cout << "[sender]: current ssthreash: " << ssthreash << endl;
+                cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
+            }
+        }
+
+        ack_freq_map.clear();
     }
-    fclose(fp);
 
-    fin_ack(sockfd);
-
-    printf("[INFO]: Closing the socket\n");
-    close(s);
+    cout << "[sender]: All packet sent... " << ssthreash << endl;
+    printf("[sender]: Closing the socket\n");
+    close(sockfd);
     return;
+
 }
 
 /*
@@ -320,5 +356,8 @@ int main(int argc, char** argv) {
 
     reliablyTransfer(argv[1], udpPort, argv[3], numBytes);
 
+
     return (EXIT_SUCCESS);
 }
+
+

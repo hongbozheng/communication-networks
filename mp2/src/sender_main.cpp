@@ -99,7 +99,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     }
 
 	/* Send data and receive acknowledgements on s */
-    int cwnd = MSS;
+    int cwnd_byte = MSS;
     int ssthreash = INIT_SSTHRESH;
     int seq_num = 0;
     int byte_xfer_total = 0;
@@ -116,10 +116,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
 
         printf("--------------------------------------------------\n");
-        int pkt_num = cwnd / MSS;
-        printf("[INFO]: cwnd      %d\n", cwnd);
-        printf("[INFO]: ssthreash %d\n", ssthreash);
+        int pkt_num = cwnd_byte / MSS;
+        printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+        printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
         printf("[INFO]: MSS       %d\n", MSS);
+        printf("[INFO]: ssthreash %d\n", ssthreash);
         bool pkt_timeout = false;
         bool ack_3 = false;
 
@@ -201,36 +202,38 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
 
         if(pkt_timeout) {
-            ssthreash = cwnd / 2;
-            cwnd = MSS;
+            ssthreash = cwnd_byte/2;
+            cwnd_byte = MSS;
             printf("[INFO]: ACK %d TIMEOUT\n", ack.seq_num);
-            printf("[INFO]: cwnd      %d", cwnd);
-            printf("[INFO]: ssthreash %d", ssthreash);
-            printf("[INFO]: %d", (cwnd / MSS));
+            printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+            printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+            printf("[INFO]: ssthreash %d\n", ssthreash);
         } else if(ack_3) {
-            ssthreash = cwnd / 2;
-            cwnd = ssthreash + 3 * MSS;
-            printf("[INFO]: 3 duplicate ACK %d", ack.seq_num);
-            cout << "[sender]: current ssthreash: " << ssthreash << endl;
-            cout << "[sender]: current cwnd: " << (cwnd / MSS) << endl;
+            ssthreash = cwnd_byte/2;
+            cwnd_byte = ssthreash + 3*MSS;
+            printf("[INFO]: 3 duplicate ACK %d\n", ack.seq_num);
+            printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+            printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+            printf("[INFO]: ssthreash %d\n", ssthreash);
         } else {
-            if(cwnd >= ssthreash) {
-                cwnd += MSS;
-                cout << "[sender]: Congestion Control Phase" << endl;
-                cout << "[sender]: current ssthreash: " << ssthreash << endl;
-                cout << "[sender]: current cwnd: " << (cwnd / MSS) << endl;
+            if(cwnd_byte >= ssthreash) {
+                cwnd_byte += MSS;
+                printf("[INFO]: Congestion Control Phase\n");
+                printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+                printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+                printf("[INFO]: ssthreash %d\n", ssthreash);
             } else {
-                cout << "[sender]: Slow Start Phase" << endl;
-                if(cwnd * 2 >= ssthreash) {
-                    cwnd = ssthreash;
+                printf("[INFO]: Slow Start Phase\n");
+                if(cwnd_byte * 2 >= ssthreash) {
+                    cwnd_byte = ssthreash;
                 } else {
-                    cwnd *= 2;
+                    cwnd_byte *= 2;
                 }
-                cout << "[sender]: current ssthreash: " << ssthreash << endl;
-                cout << "[sender]: current cwnd: " << (cwnd / MSS) << endl;
+                printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+                printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+                printf("[INFO]: ssthreash %d\n", ssthreash);
             }
         }
-
         ack_freq_map.clear();
     }
 

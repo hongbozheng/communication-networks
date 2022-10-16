@@ -120,10 +120,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         bool ack_3 = false;
 
         while((byte_xfer_total < bytesToTransfer) && (pkt_q.size() < pkt_num_max)) {
-            //if(byte_xfer_total >= bytesToTransfer) {
-            //    final_packet_read = true;
-            //    break;
-            //}
             if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
                 byte_num = fread(pkt.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
             } else {

@@ -22,7 +22,31 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <fstream>                                                                                  
+#include <iostream>
+#include <errno.h>
 
+#define TIMEOUT_SECONDS 1                                                                           
+#define MAXDATASIZE 1100 // max number of bytes we can get at once
+#define CONTENT_BUFFER_SIZE 1200
+
+struct Packet {
+    char content[CONTENT_BUFFER_SIZE];
+    int seq_num;
+    int bytes_read;
+};
+
+struct ACK_MSG {
+    int ack_num;
+};
+
+using namespace std;
+struct timeval tv;
+struct sockaddr_in si_me, si_other, s_addr;
+socklen_t s_addrlen = sizeof s_addr;
+int sockfd, slen, n;
+
+/*
 #define DATA            0
 #define ACK             2
 #define FIN             3
@@ -44,5 +68,5 @@ socklen_t addrlen = sizeof sender_addr;
 int s, slen;
 
 char buf[sizeof(packet)];
-
+*/
 #endif

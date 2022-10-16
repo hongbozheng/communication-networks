@@ -48,9 +48,9 @@ struct Packet {
     int size;
 };
 
-struct ACK_MSG {
+typedef struct {
     int ack_num;
-};
+} ACK;
 
 int MSS = sizeof(char)*BUFFER_SIZE;
 

@@ -103,9 +103,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     int byte_xfer_total = 0;
     ssthreash = INIT_SSTHRESH;
     int start_offset = 0;
-    int i;
+    //int i;
     int seq_num = SEQUENCE_NUM_INIT;
-    struct ACK_MSG ack_msg;
+    ACK ack;
     unordered_map<int, int> ack_freq_map;
     bool final_packet_read = false;
 //    double r = ((double) rand() / (RAND_MAX));
@@ -165,11 +165,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 //        cout << "[Sender]: end_seq_this_round: " << end_seq_this_round << endl;
 //        cout << "[Sender]: seq_received size: " << end_seq_this_round-start_seq_this_round+1 << endl;
 
-        bool seq_received[seq_end-seq_start+1];
+        bool ACK_receive[seq_end-seq_start+1];
 //        cout << "[Sender]: init seq_received: " << end_seq_this_round << endl;
 //        cout << "[Sender]: init seq_received size: " << sizeof(seq_received) / sizeof(seq_received[0]) << endl;
 //        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
-        fill(seq_received, seq_received + seq_end-seq_start+1, false);
+        fill(ACK_receive, ACK_receive+ seq_end-seq_start+1, false);
 //        cout << "[Sender]: after seq_received: " << end_seq_this_round << endl;
 //        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
 
@@ -197,34 +197,34 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
 
         /* Waiting for the ACK */
-        auto start = std::chrono::system_clock::now();
-        for(int j = 0; j < cwnd.size(); j++) {
+        auto start_time = std::chrono::system_clock::now();
+        for(int i = 0; i < cwnd.size(); ++i) {
             /* Timeout the for loop when the time is out */
             auto end = std::chrono::system_clock::now();
-            if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count() >= TIMEOUT_SECONDS) {
+            if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count() >= TIMEOUT_SECONDS) {
                 cout << "[sender]: this round of ack waiting is timeout! " << endl;
                 break;
             }
 
             /* Receiving ACKs */
-            if((byte_recv = recvfrom(sockfd, &ack_msg, sizeof(ack_msg), 0, (struct sockaddr *)&c_addr, &c_addrlen)) == -1) {
+            if((byte_recv = recvfrom(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&c_addr, &c_addrlen)) == -1) {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     // Receiving ACK TIMEOUT. Retransmit...
                     printf("[INFO]: Fail to receive ACK, resending packet %s\n",ack_buffer);
                     pkt_timeout = true;
                 } else {
                     // Other errors occurred. Error msg printed.
-                    fprintf(stderr, "[Receiver] - recv: %s (%d)\n", strerror(errno), errno);
-                    diep("[sender] - recvfrom receiver error..");
+                    //fprintf(stderr, "[Receiver] - recv: %s (%d)\n", strerror(errno), errno);
+                    printf("[ERROR]: recvfrom fail\n");
                 }
             } else {
-                cout << "[sender]: ACK RECEIVED: " << ack_msg.ack_num << endl;
-                seq_received[ack_msg.ack_num-1-seq_start] = true;
-                if(ack_freq_map.count(ack_msg.ack_num) == 0) {
-                    ack_freq_map[ack_msg.ack_num] = 1;
+                printf("[INFO]: ACK RECEIVED %d\n: ", ack.ack_num);
+                ACK_receive[ack.ack_num-seq_start-1] = true;
+                if(ack_freq_map.count(ack.ack_num) == 0) {
+                    ack_freq_map[ack.ack_num] = 1;
                 } else {
-                    ack_freq_map[ack_msg.ack_num] += 1;
-                    if(ack_freq_map[ack_msg.ack_num] == 3) {
+                    ack_freq_map[ack.ack_num] += 1;
+                    if(ack_freq_map[ack.ack_num] == 3) {
                         has_3_dup_ack = true;
                     }
                 }
@@ -245,9 +245,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 //            cwnd.clear();
 //        }
 
-        int lask_acked_seq_index = get_lask_acked_seq(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
+        int lask_acked_seq_index = get_lask_acked_seq(ACK_receive, sizeof(ACK_receive) / sizeof(ACK_receive[0]));
         cout << "[sender]: seq_received this round: " << endl;
-        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
+        printArr(ACK_receive, sizeof(ACK_receive) / sizeof(ACK_receive[0]));
         cout << "[sender]: lask_acked_seq_index: " << lask_acked_seq_index << endl;
         if(lask_acked_seq_index != -1) {
             for(int j = 0; j <= lask_acked_seq_index; j++) {
@@ -258,7 +258,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         if(pkt_timeout) {
             ssthreash = cwnd_size / 2;
             cwnd_size = MSS;
-            cout << "[sender]: This round has timeout packet: " << ack_msg.ack_num << endl;
+            cout << "[sender]: This round has timeout packet: " << ack.ack_num << endl;
             cout << "[sender]: current ssthreash: " << ssthreash << endl;
             cout << "[sender]: current MSS: " << MSS << endl;
             cout << "[sender]: current cwnd_size: " << cwnd_size << endl;
@@ -267,7 +267,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         } else if(has_3_dup_ack) {
             ssthreash = cwnd_size / 2;
             cwnd_size = ssthreash + 3 * MSS;
-            cout << "[sender]: This round has 3 duplicate acks: " << ack_msg.ack_num << endl;
+            cout << "[sender]: This round has 3 duplicate acks: " << ack.ack_num << endl;
             cout << "[sender]: current ssthreash: " << ssthreash << endl;
             cout << "[sender]: current cwnd: " << (cwnd_size / MSS) << endl;
         } else {
@@ -291,11 +291,10 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         ack_freq_map.clear();
     }
 
-    cout << "[sender]: All packet sent... " << ssthreash << endl;
-    printf("[sender]: Closing the socket\n");
+    printf("[INFO]: All packet sent successfully %d\n", ssthreash);
+    printf("[INFO]: Closing the socket\n");
     close(sockfd);
     return;
-
 }
 
 /*
@@ -307,7 +306,7 @@ int main(int argc, char** argv) {
     unsigned long long int numBytes;
 
     if (argc != 5) {
-        fprintf(stderr, "usage: %s receiver_hostname receiver_port filename_to_xfer bytes_to_xfer\n\n", argv[0]);
+        fprintf(stderr, "[USAGE]: %s <receiver_hostname> <receiver_port> <filename_to_xfer> <bytes_to_xfer>\n\n", argv[0]);
         exit(1);
     }
     udpPort = (unsigned short int) atoi(argv[2]);
@@ -315,8 +314,5 @@ int main(int argc, char** argv) {
 
     reliablyTransfer(argv[1], udpPort, argv[3], numBytes);
 
-
     return (EXIT_SUCCESS);
 }
-
-

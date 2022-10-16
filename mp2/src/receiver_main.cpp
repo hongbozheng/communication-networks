@@ -35,7 +35,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 
     /* set timeout for socket */
     struct timeval tv;
-    tv.tv_sec = TIMEOUT_SECONDS*3;
+    tv.tv_sec = TIMEOUT*3;
     tv.tv_usec = 0;
     if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv) == -1) {
         printf("[ERROR]: Failed to set socket timeout\n");
@@ -67,6 +67,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
                 ack.ack_num = pkt.seq_num+1;
                 if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {
                     printf("[ERROR]: Fail to send ACK to server\n");
+                    exit(1);
                 }
                 printf("[INFO]: Send ACK %d successfully\n", ack.ack_num);
                 fwrite(&pkt.data, sizeof(char), pkt.size, fp);
@@ -88,7 +89,6 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     close(sockfd);
     printf("[INFO]: File %s received successfully\n", destinationFile);
     return;
-
 }
 
 /*

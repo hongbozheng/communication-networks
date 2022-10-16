@@ -24,11 +24,11 @@
 #include <pthread.h>
 #include <errno.h>
 
-#define TIMEOUT_SECONDS 1                                                                           
-#define CONTENT_BUFFER_SIZE 1200
+#define TIMEOUT         1
+#define DATA_BUF_SIZE   1200
 
 typedef struct {
-    char data[CONTENT_BUFFER_SIZE];
+    char data[DATA_BUF_SIZE];
     int seq_num;
     int size;
 } packet;

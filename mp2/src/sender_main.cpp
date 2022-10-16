@@ -95,9 +95,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     }
 
 	/* Send data and receive acknowledgements on s */
-    c_addrlen= sizeof(c_addr);
     int cwnd = MSS;
-
     int ssthreash = INIT_SSTHRESH;
     int byte_xfer_total = 0;
     int seq_num = SEQUENCE_NUM_INIT;

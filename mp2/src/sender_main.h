@@ -35,13 +35,6 @@
 #define FAST_RECOVERY 2
 #define SEQUENCE_NUM_INIT 0
 
-char read_buffer[BUFFER_SIZE];
-char ack_buffer[3];
-struct sockaddr_in si_other, c_addr;                                                                
-
-int sockfd, slen, n;
-socklen_t c_addrlen;
-
 typedef struct {
     char data[BUFFER_SIZE];
     int seq_num;
@@ -52,7 +45,12 @@ typedef struct {
     int seq_num;
 } ACK;
 
-int MSS = sizeof(char)*BUFFER_SIZE;
+char read_buffer[BUFFER_SIZE];
+char ack_buffer[3];
+struct sockaddr_in si_other, c_addr;                                                                
+socklen_t c_addrlen = sizeof c_addr;
+int sockfd, slen, n;
+const int MSS = sizeof(char)*BUFFER_SIZE;
 
 /*
 //packet structure used for transfering

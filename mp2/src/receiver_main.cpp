@@ -35,7 +35,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
 
     /* set timeout for socket */
     struct timeval tv;
-    tv.tv_sec = TIMEOUT*3;
+    tv.tv_sec = TIMEOUT*2;
     tv.tv_usec = 0;
     if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv) == -1) {
         printf("[ERROR]: Failed to set socket timeout\n");

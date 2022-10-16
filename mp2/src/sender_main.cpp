@@ -106,7 +106,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     int byte_num;
     packet pkt;
     ACK ack;
-    deque<packet> cwnd;
+    deque<packet> pkt_q;
     unordered_map<int, int> ack_freq_map;
     bool final_packet_read = false;
 //    double r = ((double) rand() / (RAND_MAX));
@@ -124,7 +124,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         //dup_ACK = 0;
         bool pkt_timeout = false;
         bool ack_3 = false;
-        while(cwnd.size() < cwnd_capacity) {
+        while(pkt_q.size() < cwnd_capacity) {
             if(byte_xfer_total >= bytesToTransfer) {
                 final_packet_read = true;
                 break;
@@ -149,15 +149,15 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             pkt.size = byte_num;
 //            cout << "[Sender]: current packet size: " << sizeof(packet) << endl;
 
-            cwnd.push_back(pkt);
+            pkt_q.push_back(pkt);
         }
 
-        if(final_packet_read && cwnd.size() == 0) {
+        if(final_packet_read && pkt_q.size() == 0) {
             break;
         }
 
-        int seq_start = cwnd.front().seq_num;
-        int seq_end = cwnd.back().seq_num;
+        int seq_start = pkt_q.front().seq_num;
+        int seq_end = pkt_q.back().seq_num;
         printf("[INFO]: start_seq_this_round: \n", seq_start);
 //        cout << "[Sender]: end_seq_this_round: " << end_seq_this_round << endl;
 //        cout << "[Sender]: seq_received size: " << end_seq_this_round-start_seq_this_round+1 << endl;
@@ -173,10 +173,10 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         /* Sending file to the receiver */
 
         cout << "[Sender]: packets to be sent this round: " << endl;
-        printWindow(cwnd);
+        printWindow(pkt_q);
 
 
-        for(int i = 0; i < cwnd.size(); ++i) {
+        for(int i = 0; i < pkt_q.size(); ++i) {
 
             // mock packet loss
 //            if( ((double) rand() / (RAND_MAX)) < 0.05) {
@@ -184,18 +184,18 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 //                continue;
 //            }
 
-            if (sendto(sockfd, &cwnd[i], sizeof(cwnd[i]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
+            if (sendto(sockfd, &pkt_q[i], sizeof(pkt_q[i]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
                 perror("send");
                 exit(1);
             }
 
 
-            printf("[INFO]: packet with seq_num %d is sent successfully\n", cwnd[i].seq_num);
+            printf("[INFO]: packet with seq_num %d is sent successfully\n", pkt_q[i].seq_num);
         }
 
         /* Waiting for the ACK */
         auto start_time = std::chrono::system_clock::now();
-        for(int i = 0; i < cwnd.size(); ++i) {
+        for(int i = 0; i < pkt_q.size(); ++i) {
             /* Timeout the for loop when the time is out */
             //auto end = std::chrono::system_clock::now();
             if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count() >= TIMEOUT_SECONDS) {
@@ -248,7 +248,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         cout << "[sender]: lask_acked_seq_index: " << lask_acked_seq_index << endl;
         if(lask_acked_seq_index != -1) {
             for(int i = 0; i <= lask_acked_seq_index; ++i) {
-                cwnd.pop_front();
+                pkt_q.pop_front();
             }
         }
 

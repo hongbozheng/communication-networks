@@ -111,16 +111,16 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     unordered_map<int, int> ack_freq_map;
 
     while(1) {
-        printf("--------------------------------------------------------\n");
-        /* Read bytes from the file and copy it to the current window */
-        int pkt_num = cwnd / MSS;
-        cout << "[Sender]: new round of cwnd_size: " << cwnd << endl;
-        cout << "[Sender]: new round of ssthreash: " << ssthreash << endl;
-        cout << "[Sender]: new round of MSS: " << MSS << endl;
-        cout << "[Sender]: new round of cwnd: " << endl;
-        //cout << "[Sender]: new round of start_offset: " << start_offset << endl;
+        if(final_packet_read && pkt_q.size() == 0) {
+            break;
+        }
 
-        //dup_ACK = 0;
+        printf("--------------------------------------------------------\n");
+        int pkt_num = cwnd / MSS;
+        printf("[INFO]: cwnd: %d\n", cwnd);
+        printf("[INFO]: ssthreash: %d\n", ssthreash);
+        printf("[INFO]: MSS: %d\n", MSS);
+
         bool pkt_timeout = false;
         bool ack_3 = false;
         while(pkt_q.size() < pkt_num) {
@@ -130,13 +130,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
             else if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
                 byte_num = fread(pkt.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
-                cout << "[Sender]: A - current bytes read: " << byte_num << endl;
             } else {
                 byte_num = fread(pkt.data, sizeof(char), BUFFER_SIZE, fp);
-                cout << "[Sender]: B - current bytes read: " << byte_num << endl;
             }
-
-//            cout << "[Sender]: A - current content read: " << packet.content << endl;
 
             if(byte_num == 0) {
                 final_packet_read = true;
@@ -146,18 +142,12 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             byte_xfer_total += byte_num;
             pkt.seq_num = seq_num++;
             pkt.size = byte_num;
-//            cout << "[Sender]: current packet size: " << sizeof(packet) << endl;
-
             pkt_q.push_back(pkt);
-        }
-
-        if(final_packet_read && pkt_q.size() == 0) {
-            break;
         }
 
         int seq_start = pkt_q.front().seq_num;
         int seq_end = pkt_q.back().seq_num;
-        printf("[INFO]: start_seq_this_round: \n", seq_start);
+        printf("[INFO]: cwnd seq num %d ~ %d\n", seq_start, seq_end);
 //        cout << "[Sender]: end_seq_this_round: " << end_seq_this_round << endl;
 //        cout << "[Sender]: seq_received size: " << end_seq_this_round-start_seq_this_round+1 << endl;
 

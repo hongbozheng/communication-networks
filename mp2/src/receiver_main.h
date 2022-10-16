@@ -23,7 +23,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <fstream>                                                                                  
-#include <iostream>
 #include <errno.h>
 
 #define TIMEOUT_SECONDS 1                                                                           

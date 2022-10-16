@@ -42,15 +42,14 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     }
 
     /* Now receive data and send acknowledgements */
-    ofstream received_file;
-    string destinationFileStr = destinationFile;
-    received_file.open(destinationFileStr.c_str(), ios::binary);
+    FILE *fp = fopen(destinationFile,"wb");
     int seq_num = 0;
     int byte_num;
+    packet pkt;
+    ACK ack;
 
-    while (true) {
+    while(1) {
         printf("--------------------------------------------------\n");
-        packet pkt;
         if((byte_num = recvfrom(sockfd, &pkt, sizeof(pkt), 0, (struct sockaddr *)&s_addr, &s_addrlen)) == -1) {
             if(errno == EAGAIN || errno == EWOULDBLOCK) {
                 printf("[INFO] Server TIMEOUT Closing Socket\n");
@@ -64,14 +63,13 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         printf("[INFO]: Receive packet %d, %d byte(s)\n", pkt.seq_num, pkt.size);
         
         if (byte_num > 0) {
-            ACK ack;
             if(pkt.seq_num == seq_num) {
                 ack.ack_num = pkt.seq_num+1;
                 if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {
                     printf("[ERROR]: Fail to send ACK to server\n");
                 }
                 printf("[INFO]: Send ACK %d successfully\n", ack.ack_num);
-                received_file.write(pkt.data, sizeof(char) * pkt.size);
+                fwrite(&pkt.data, sizeof(char), pkt.size, fp);
                 seq_num += 1;
             } else {
                 ack.ack_num = seq_num;
@@ -85,7 +83,8 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
             printf("[INFO]: recvfrom receives byte <= 0\n");
         }
     }
-
+    
+    fclose(fp);
     close(sockfd);
     printf("[INFO]: File %s received successfully\n", destinationFile);
     return;

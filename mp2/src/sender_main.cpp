@@ -115,14 +115,14 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             break;
         }
 
-        printf("--------------------------------------------------------\n");
+        printf("--------------------------------------------------\n");
         int pkt_num = cwnd / MSS;
-        printf("[INFO]: cwnd: %d\n", cwnd);
-        printf("[INFO]: ssthreash: %d\n", ssthreash);
-        printf("[INFO]: MSS: %d\n", MSS);
-
+        printf("[INFO]: cwnd      %d\n", cwnd);
+        printf("[INFO]: ssthreash %d\n", ssthreash);
+        printf("[INFO]: MSS       %d\n", MSS);
         bool pkt_timeout = false;
         bool ack_3 = false;
+
         while(pkt_q.size() < pkt_num) {
             if(byte_xfer_total >= bytesToTransfer) {
                 final_packet_read = true;
@@ -148,60 +148,33 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         int seq_start = pkt_q.front().seq_num;
         int seq_end = pkt_q.back().seq_num;
         printf("[INFO]: cwnd seq num %d ~ %d\n", seq_start, seq_end);
-//        cout << "[Sender]: end_seq_this_round: " << end_seq_this_round << endl;
-//        cout << "[Sender]: seq_received size: " << end_seq_this_round-start_seq_this_round+1 << endl;
-
         int ACK_receive[seq_end-seq_start+1];
-//        cout << "[Sender]: init seq_received: " << end_seq_this_round << endl;
-//        cout << "[Sender]: init seq_received size: " << sizeof(seq_received) / sizeof(seq_received[0]) << endl;
-//        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
         fill(ACK_receive, ACK_receive+ seq_end-seq_start+1, 0);
-//        cout << "[Sender]: after seq_received: " << end_seq_this_round << endl;
-//        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
 
-        /* Sending file to the receiver */
-
-        cout << "[Sender]: packets to be sent this round: " << endl;
+        printf("[INFO]: packets to be sent this round: ");
         printWindow(pkt_q);
-
-
         for(int i = 0; i < pkt_q.size(); ++i) {
-
-            // mock packet loss
-//            if( ((double) rand() / (RAND_MAX)) < 0.05) {
-//                cout << "********[Sender]: PACKET LOSS OCCURRED FOR seq_num: " << cwnd[j].seq_num << " **********" << endl;
-//                continue;
-//            }
-
             if (sendto(sockfd, &pkt_q[i], sizeof(pkt_q[i]), 0, (struct sockaddr *) &si_other, sizeof(si_other)) == -1) {
-                perror("send");
+                printf("[ERROR]: Fail to send packet to client\n");
                 exit(1);
             }
-
-
-            printf("[INFO]: packet with seq_num %d is sent successfully\n", pkt_q[i].seq_num);
+            printf("[INFO]: Packet seq_num %d is sent successfully\n", pkt_q[i].seq_num);
         }
 
-        /* Waiting for the ACK */
         auto start_time = std::chrono::system_clock::now();
         for(int i = 0; i < pkt_q.size(); ++i) {
-            /* Timeout the for loop when the time is out */
-            //auto end = std::chrono::system_clock::now();
             if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count() >= TIMEOUT_SECONDS) {
                 printf("[INFO]: WAITING ACK TIMEOUT\n");
                 break;
             }
 
-            /* Receiving ACKs */
             if((byte_num = recvfrom(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&c_addr, &c_addrlen)) == -1) {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
-                    // Receiving ACK TIMEOUT. Retransmit...
-                    printf("[INFO]: Fail to receive ACK, resending packet %s\n",ack_buffer);
+                    printf("[INFO]: Fail to receive ACK\n");
                     pkt_timeout = true;
                 } else {
-                    // Other errors occurred. Error msg printed.
-                    //fprintf(stderr, "[Receiver] - recv: %s (%d)\n", strerror(errno), errno);
                     printf("[ERROR]: recvfrom fail\n");
+                    exit(1);
                 }
             } else {
                 printf("[INFO]: ACK RECEIVED %d\n", ack.seq_num);
@@ -216,20 +189,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 }
             }
         }
-
-        /* Prep for the next round */
-//        int first_absent_seq_index = get_first_absent_seq(seq_received);
-//        cout << "[sender]: seq_received this round: " << endl;
-//        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
-//        cout << "[sender]: first_absent_seq_index: " << first_absent_seq_index << endl;
-//        if(first_absent_seq_index != -1) {
-//            for(int j = 0; j < first_absent_seq_index; j++) {
-//                cwnd.pop_front();
-//            }
-//        } else {
-//            // no packet loss this round
-//            cwnd.clear();
-//        }
 
         int lask_acked_seq_index = get_lask_acked_seq(ACK_receive, sizeof(ACK_receive) / sizeof(ACK_receive[0]));
         cout << "[sender]: seq_received this round: " << endl;

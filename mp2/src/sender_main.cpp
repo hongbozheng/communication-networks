@@ -111,7 +111,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
 
         printf("--------------------------------------------------\n");
-        int pkt_num = cwnd_byte / MSS;
+        int pkt_num_max = cwnd_byte/MSS;
         printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
         printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
         printf("[INFO]: MSS       %d\n", MSS);
@@ -119,12 +119,12 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         bool pkt_timeout = false;
         bool ack_3 = false;
 
-        while(pkt_q.size() < pkt_num) {
-            if(byte_xfer_total >= bytesToTransfer) {
-                final_packet_read = true;
-                break;
-            }
-            else if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
+        while((byte_xfer_total < bytesToTransfer) && (pkt_q.size() < pkt_num_max)) {
+            //if(byte_xfer_total >= bytesToTransfer) {
+            //    final_packet_read = true;
+            //    break;
+            //}
+            if(byte_xfer_total + BUFFER_SIZE > bytesToTransfer) {
                 byte_num = fread(pkt.data, sizeof(char), bytesToTransfer - byte_xfer_total, fp);
             } else {
                 byte_num = fread(pkt.data, sizeof(char), BUFFER_SIZE, fp);

@@ -39,7 +39,7 @@ char read_buffer[BUFFER_SIZE];
 char ack_buffer[3];
 struct sockaddr_in si_other, c_addr;                                                                
 
-int sockfd, slen, n, transferredBytes, dup_ACK, ssthreash;
+int sockfd, slen, n, transferredBytes, ssthreash, dup_ACK;
 socklen_t c_addrlen;
 
 struct Packet {

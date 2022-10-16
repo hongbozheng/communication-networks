@@ -30,9 +30,11 @@
 #define BUFFER_SIZE 1200
 #define INIT_SSTHRESH 64000
 #define TIMEOUT_SECONDS 1
-#define SLOW_START 0
-#define CONGESTION_AVOIDANCE 1
-#define FAST_RECOVERY 2
+//#define SLOW_START 0
+//#define CONGESTION_AVOIDANCE 1
+//#define FAST_RECOVERY 2
+
+enum ctrl_state {SLOW_START, CONGESTION_AVOIDANCE, FAST_RECOVERY};
 
 typedef struct {
     char data[BUFFER_SIZE];
@@ -48,6 +50,7 @@ struct sockaddr_in si_other, c_addr;
 socklen_t c_addrlen = sizeof c_addr;
 const int MSS = sizeof(char)*BUFFER_SIZE;
 int sockfd, slen, n;
+int state = SLOW_START;
 
 /*
 //packet structure used for transfering

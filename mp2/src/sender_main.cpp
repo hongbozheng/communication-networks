@@ -203,16 +203,14 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         if(pkt_timeout) {
             ssthreash = cwnd / 2;
             cwnd = MSS;
-            cout << "[sender]: This round has timeout packet: " << ack.seq_num << endl;
-            cout << "[sender]: current ssthreash: " << ssthreash << endl;
-            cout << "[sender]: current MSS: " << MSS << endl;
-            cout << "[sender]: current cwnd_size: " << cwnd << endl;
-            cout << "[sender]: current test: " << (1000/1000) << endl;
-            cout << "[sender]: current cwnd window size: " << (cwnd / MSS) << endl;
+            printf("[INFO]: ACK %d TIMEOUT\n", ack.seq_num);
+            printf("[INFO]: cwnd      %d", cwnd);
+            printf("[INFO]: ssthreash %d", ssthreash);
+            printf("[INFO]: %d", (cwnd / MSS));
         } else if(ack_3) {
             ssthreash = cwnd / 2;
             cwnd = ssthreash + 3 * MSS;
-            cout << "[sender]: This round has 3 duplicate acks: " << ack.seq_num << endl;
+            printf("[INFO]: 3 duplicate ACK %d", ack.seq_num);
             cout << "[sender]: current ssthreash: " << ssthreash << endl;
             cout << "[sender]: current cwnd: " << (cwnd / MSS) << endl;
         } else {

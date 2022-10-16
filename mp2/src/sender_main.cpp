@@ -11,20 +11,9 @@
 
 #include "sender_main.h"
 
-using namespace std;
-
 void diep(char *s) {
     perror(s);
     exit(1);
-}
-
-string convertToString(char* chars, int size) {
-    string s(chars);
-    // if size x is passed in, we return its first x chars
-    if(size != -1) {
-        return s.substr(size);
-    }
-    return s;
 }
 
 void printArr(int arr[], int size) {
@@ -36,7 +25,7 @@ void printArr(int arr[], int size) {
 }
 
 
-void printWindow(const deque<packet> v){
+void printWindow(const std::deque<packet> v){
     printf("[");
     for(unsigned i = 0; i < v.size(); ++i) {
         printf(" %d ",v[i].seq_num);
@@ -54,14 +43,40 @@ int get_lask_acked_seq(int arr[], int size) {
     return -1;
 }
 
-
-int get_first_absent_seq(bool arr[]) {
-    for(int i = 0; i < sizeof(arr) / sizeof(arr[0]); i++) {
-        if(!arr[i]) {
-            return i;
+void state_ctrl(bool pkt_timeout, bool ack_3, ACK ack) {
+    if(pkt_timeout) {
+        ssthreash = cwnd_byte/2;
+        cwnd_byte = MSS;
+        printf("[INFO]: ACK %d TIMEOUT\n", ack.seq_num);
+        printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+        printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+        printf("[INFO]: ssthreash %d\n", ssthreash);
+    } else if(ack_3) {
+        ssthreash = cwnd_byte/2;
+        cwnd_byte = ssthreash + 3*MSS;
+        printf("[INFO]: 3 duplicate ACK %d\n", ack.seq_num);
+        printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+        printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+        printf("[INFO]: ssthreash %d\n", ssthreash);
+    } else {
+        if(cwnd_byte >= ssthreash) {
+            cwnd_byte += MSS;
+            printf("[INFO]: Congestion Control Phase\n");
+            printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+            printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+            printf("[INFO]: ssthreash %d\n", ssthreash);
+        } else {
+            printf("[INFO]: Slow Start Phase\n");
+            if(cwnd_byte * 2 >= ssthreash) {
+                cwnd_byte = ssthreash;
+            } else {
+                cwnd_byte *= 2;
+            }
+            printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
+            printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
+            printf("[INFO]: ssthreash %d\n", ssthreash);
         }
     }
-    return -1;
 }
 
 void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* filename, unsigned long long int bytesToTransfer) {
@@ -99,16 +114,14 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     }
 
 	/* Send data and receive acknowledgements on s */
-    int cwnd_byte = MSS;
-    int ssthreash = INIT_SSTHRESH;
     int seq_num = 0;
     int byte_xfer_total = 0;
     int byte_num;
     bool final_packet_read = false;
     packet pkt;
     ACK ack;
-    deque<packet> pkt_q;
-    unordered_map<int, int> ack_freq_map;
+    std::deque<packet> pkt_q;
+    std::unordered_map<int, int> ack_freq_map;
 
     while(1) {
         if(final_packet_read && pkt_q.size() == 0) {
@@ -150,7 +163,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         int seq_end = pkt_q.back().seq_num;
         printf("[INFO]: cwnd seq num %d ~ %d\n", seq_start, seq_end);
         int ACK_receive[seq_end-seq_start+1];
-        fill(ACK_receive, ACK_receive+ seq_end-seq_start+1, 0);
+        std::fill(ACK_receive, ACK_receive+ seq_end-seq_start+1, 0);
 
         printf("[INFO]: packets to be sent this round: ");
         printWindow(pkt_q);
@@ -192,48 +205,16 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
 
         int lask_acked_seq_index = get_lask_acked_seq(ACK_receive, sizeof(ACK_receive) / sizeof(ACK_receive[0]));
-        cout << "[sender]: seq_received this round: " << endl;
+        printf("[INFO]: seq_received this round: ");
         printArr(ACK_receive, sizeof(ACK_receive) / sizeof(ACK_receive[0]));
-        cout << "[sender]: lask_acked_seq_index: " << lask_acked_seq_index << endl;
+        printf("[INFO]: lask_acked_seq_index: %d\n", lask_acked_seq_index);
         if(lask_acked_seq_index != -1) {
             for(int i = 0; i <= lask_acked_seq_index; ++i) {
                 pkt_q.pop_front();
             }
         }
 
-        if(pkt_timeout) {
-            ssthreash = cwnd_byte/2;
-            cwnd_byte = MSS;
-            printf("[INFO]: ACK %d TIMEOUT\n", ack.seq_num);
-            printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
-            printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
-            printf("[INFO]: ssthreash %d\n", ssthreash);
-        } else if(ack_3) {
-            ssthreash = cwnd_byte/2;
-            cwnd_byte = ssthreash + 3*MSS;
-            printf("[INFO]: 3 duplicate ACK %d\n", ack.seq_num);
-            printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
-            printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
-            printf("[INFO]: ssthreash %d\n", ssthreash);
-        } else {
-            if(cwnd_byte >= ssthreash) {
-                cwnd_byte += MSS;
-                printf("[INFO]: Congestion Control Phase\n");
-                printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
-                printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
-                printf("[INFO]: ssthreash %d\n", ssthreash);
-            } else {
-                printf("[INFO]: Slow Start Phase\n");
-                if(cwnd_byte * 2 >= ssthreash) {
-                    cwnd_byte = ssthreash;
-                } else {
-                    cwnd_byte *= 2;
-                }
-                printf("[INFO]: cwnd      %d\n", cwnd_byte/MSS);
-                printf("[INFO]: cwnd_byte %d\n", cwnd_byte);
-                printf("[INFO]: ssthreash %d\n", ssthreash);
-            }
-        }
+        state_ctrl(pkt_timeout, ack_3, ack);
         ack_freq_map.clear();
     }
 

@@ -39,7 +39,7 @@ char read_buffer[BUFFER_SIZE];
 char ack_buffer[3];
 struct sockaddr_in si_other, c_addr;                                                                
 
-int sockfd, slen, n, transferredBytes, ssthreash, dup_ACK;
+int sockfd, slen, n;
 socklen_t c_addrlen;
 
 typedef struct {

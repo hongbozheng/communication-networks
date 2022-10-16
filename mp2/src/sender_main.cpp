@@ -23,7 +23,7 @@ string convertToString(char* chars, int size) {
     return s;
 }
 
-void printArr(bool arr[], int size) {
+void printArr(int arr[], int size) {
     printf("[");
     for(int i = 0; i < size; ++i) {
         printf(" %d ",arr[i]);
@@ -41,7 +41,7 @@ void printWindow(const deque<packet> v){
 
 }
 
-int get_lask_acked_seq(bool arr[], int size) {
+int get_lask_acked_seq(int arr[], int size) {
     for(int i = size-1; i >= 0; i--) {
         if(arr[i]) {
             return i;
@@ -96,19 +96,18 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
 	/* Send data and receive acknowledgements on s */
     c_addrlen= sizeof(c_addr);
-    transferredBytes = 0;
     int cwnd_size = MSS;
 
+    int ssthreash = INIT_SSTHRESH;
     int byte_xfer_total = 0;
-    ssthreash = INIT_SSTHRESH;
-    //int start_offset = 0;
     int seq_num = SEQUENCE_NUM_INIT;
     int byte_num;
+    bool final_packet_read = false;
     packet pkt;
     ACK ack;
     deque<packet> pkt_q;
     unordered_map<int, int> ack_freq_map;
-    bool final_packet_read = false;
+
 //    double r = ((double) rand() / (RAND_MAX));
 
     while(1) {
@@ -162,11 +161,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 //        cout << "[Sender]: end_seq_this_round: " << end_seq_this_round << endl;
 //        cout << "[Sender]: seq_received size: " << end_seq_this_round-start_seq_this_round+1 << endl;
 
-        bool ACK_receive[seq_end-seq_start+1];
+        int ACK_receive[seq_end-seq_start+1];
 //        cout << "[Sender]: init seq_received: " << end_seq_this_round << endl;
 //        cout << "[Sender]: init seq_received size: " << sizeof(seq_received) / sizeof(seq_received[0]) << endl;
 //        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
-        fill(ACK_receive, ACK_receive+ seq_end-seq_start+1, false);
+        fill(ACK_receive, ACK_receive+ seq_end-seq_start+1, 0);
 //        cout << "[Sender]: after seq_received: " << end_seq_this_round << endl;
 //        printArr(seq_received, sizeof(seq_received) / sizeof(seq_received[0]));
 
@@ -216,7 +215,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 }
             } else {
                 printf("[INFO]: ACK RECEIVED %d\n", ack.seq_num);
-                ACK_receive[ack.seq_num-seq_start-1] = true;
+                ACK_receive[ack.seq_num-seq_start-1] = 1;
                 if(ack_freq_map.count(ack.seq_num) == 0) {
                     ack_freq_map[ack.seq_num] = 1;
                 } else {

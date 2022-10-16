@@ -22,7 +22,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <fstream>                                                                                  
 #include <errno.h>
 
 #define TIMEOUT_SECONDS 1                                                                           
@@ -38,7 +37,6 @@ typedef struct {
     int ack_num;
 } ACK;
 
-using namespace std;
 struct timeval tv;
 struct sockaddr_in si_me, si_other, s_addr;
 socklen_t s_addrlen = sizeof s_addr;

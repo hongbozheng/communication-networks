@@ -191,8 +191,35 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         state_ctrl(pkt_timeout, ack_3, ack);
         ack_freq_map.clear();
     }
+    fclose(fp);
+   
+    printf("--------------------------------------------------\n");
+    while(1) {
+        pkt.seq_num = -1;
+        pkt.size = 0;
+        if(sendto(sockfd, &pkt, sizeof(packet), 0, (struct sockaddr *) &si_other, sizeof (si_other)) == -1) {
+            printf("[ERROR]: Failed to send FIN to client\n");
+            exit(1);
+        }
+        printf("[INFO]: Send FIN to client\n");
+        if(recvfrom(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&c_addr, &c_addrlen) == -1) {
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                printf("[INFO]: Fail to receive FIN ACK\n");
+                break;
+            } else {
+                printf("[ERROR]: recvfrom fail\n");
+                exit(1);
+            }
+        } else {
+                printf("[INFO]: ACK RECEIVED %d\n", ack.seq_num);
+        }
+        if(ack.seq_num == -1) {
+            printf("[INFO]: Receive the FIN_ACK\n");
+            break;
+        }
+    }
 
-    printf("[INFO]: All packet sent successfully\n");
+    printf("[INFO]: All packet(s) sent successfully\n");
     printf("[INFO]: Closing the socket\n");
     close(sockfd);
     return;

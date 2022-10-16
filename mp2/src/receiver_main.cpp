@@ -72,6 +72,14 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
                 printf("[INFO]: Send ACK %d successfully\n", ack.ack_num);
                 fwrite(&pkt.data, sizeof(char), pkt.size, fp);
                 seq_num += 1;
+            } else if(pkt.seq_num == -1) {
+                ack.ack_num = -1;
+                if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {
+                    printf("[ERROR]: Fail to send FIN ACK to server\n");
+                    exit(1);
+                }
+                printf("[INFO]: Send FIN ACK successfully\n");
+                break;
             } else {
                 ack.ack_num = seq_num;
                 if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {

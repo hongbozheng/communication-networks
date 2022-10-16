@@ -89,7 +89,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
     /* set timeout for socket */
     struct timeval tv;
-    tv.tv_sec = TIMEOUT_SECONDS;
+    tv.tv_sec = TIMEOUT;
     tv.tv_usec = 0;
     if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv) == -1) {
         printf("[ERROR]: Failed to set socket timeout\n");
@@ -155,9 +155,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             printf("[INFO]: Packet seq_num %d is sent successfully\n", pkt_q[i].seq_num);
         }
 
-        auto start_time = std::chrono::system_clock::now();
+        auto start_time = std::chrono::high_resolution_clock::now();
         for(int i = 0; i < pkt_q.size(); ++i) {
-            if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count() >= TIMEOUT_SECONDS) {
+            if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_time).count() >= TIMEOUT) {
                 printf("[INFO]: WAITING ACK TIMEOUT\n");
                 break;
             }

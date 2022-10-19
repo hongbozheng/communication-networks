@@ -23,9 +23,10 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
+#include <fstream>
 
-#define TIMEOUT         1
-#define DATA_BUF_SIZE   2500
+#define TIMEOUT         1.0
+#define DATA_BUF_SIZE   5000
 
 typedef struct {
     char data[DATA_BUF_SIZE];

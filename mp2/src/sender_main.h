@@ -25,8 +25,8 @@
 #include <deque>
 #include <unordered_map>
 
-#define BUFFER_SIZE     2500
-#define INIT_SSTHRESH   64000
+#define BUFFER_SIZE     5000
+#define INIT_SSTHRESH   700000
 #define TIMEOUT         1.0
 const int MSS = sizeof(char)*BUFFER_SIZE;
 //#define SLOW_START 0

@@ -42,9 +42,12 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     }
 
     /* Now receive data and send acknowledgements */
-    FILE *fp = fopen(destinationFile,"wb");
+    //FILE *fp = fopen(destinationFile,"wb");
+    std::ofstream recv_file;
+    std::string dest_file_str = destinationFile;
+    recv_file.open(dest_file_str.c_str(), std::ios::binary);
     int seq_num = 0;
-    int byte_num;
+    int byte_num, byte_send;
     packet pkt;
     ACK ack;
 
@@ -62,15 +65,21 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         printf("[INFO]: seq_num %d\n", seq_num);
         printf("[INFO]: Receive packet %d, %d byte(s)\n", pkt.seq_num, pkt.size);
         
+        if(byte_send < 0) {
+            printf("[INFO]: byte_send %d", byte_send);
+            continue;
+        }
+
         if (byte_num > 0) {
             if(pkt.seq_num == seq_num) {
                 ack.ack_num = pkt.seq_num+1;
-                if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {
+                if((byte_send = sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen)) == -1) {
                     printf("[ERROR]: Fail to send ACK to server\n");
                     exit(1);
                 }
                 printf("[INFO]: Send ACK %d successfully\n", ack.ack_num);
-                fwrite(&pkt.data, sizeof(char), pkt.size, fp);
+                recv_file.write(pkt.data, sizeof(char)*pkt.size);
+                //fwrite(&pkt.data, sizeof(char), pkt.size, fp);
                 seq_num += 1;
             } else if(pkt.seq_num == -1) {
                 ack.ack_num = -1;
@@ -82,7 +91,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
                 break;
             } else {
                 ack.ack_num = seq_num;
-                if(sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen) == -1) {
+                if((byte_send = sendto(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *) &s_addr, s_addrlen)) == -1) {
                     printf("[ERROR]: Fail to send ACK to server\n");
                     exit(1);
                 }
@@ -93,7 +102,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         }
     }
     
-    fclose(fp);
+    //fclose(fp);
     close(sockfd);
     printf("[INFO]: File %s received successfully\n", destinationFile);
     return;

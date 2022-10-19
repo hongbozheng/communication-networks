@@ -34,12 +34,12 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     printf("[INFO]: Client Port %d\n", htons(si_me.sin_port));
 
     /* set timeout for socket */
-    struct timeval tv;
-    tv.tv_sec = TIMEOUT*2;
-    tv.tv_usec = 0;
-    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv) == -1) {
-        printf("[ERROR]: Failed to set socket timeout\n");
-    }
+    //struct timeval tv;
+    //tv.tv_sec = TIMEOUT*2;
+    //tv.tv_usec = 0;
+    //if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv) == -1) {
+    //    printf("[ERROR]: Failed to set socket timeout\n");
+    //}
 
     /* Now receive data and send acknowledgements */
     //FILE *fp = fopen(destinationFile,"wb");

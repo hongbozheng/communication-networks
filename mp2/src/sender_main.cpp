@@ -158,7 +158,8 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
 
         auto start_time = std::chrono::high_resolution_clock::now();
         for(int i = 0; i < pkt_q.size(); ++i) {
-            if(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start_time).count() >= TIMEOUT) {
+            //printf("TIME: %f ------------ TIMEOUT: %f\n",std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_time).count(),TIMEOUT);
+            if(std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start_time).count() >= TIMEOUT) {
                 printf("[INFO]: WAITING ACK TIMEOUT\n");
                 break;
             }

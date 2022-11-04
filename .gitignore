@@ -1,10 +1,1 @@
-obj/
-*
-!.gitignore
-!Makefile
-!*.h
-!*.c
-!*.cpp
-!*.bash
-!*.sh
-!*.txt
+.idea/

@@ -5,18 +5,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <netdb.h>
 
 #define SERVERPORT "4950"	// the port users will be connecting to
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;

@@ -5,9 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -19,23 +17,19 @@
 
 #define BACKLOG 10	 // how many pending connections queue will hold
 
-void sigchld_handler(int s)
-{
+void sigchld_handler(int s) {
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 // get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
+void *get_in_addr(struct sockaddr *sa) {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	}
-
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int main(void)
-{
+int main(void) {
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	struct sockaddr_storage their_addr; // connector's address information
@@ -74,11 +68,10 @@ int main(void)
 			perror("server: bind");
 			continue;
 		}
-
 		break;
 	}
 
-	if (p == NULL)  {
+	if (p == NULL) {
 		fprintf(stderr, "server: failed to bind\n");
 		return 2;
 	}
@@ -122,7 +115,5 @@ int main(void)
 		}
 		close(new_fd);  // parent doesn't need this
 	}
-
 	return 0;
 }
-

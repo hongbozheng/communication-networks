@@ -14,9 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -298,6 +296,5 @@ int main(int argc, char *argv[]) {
 		}
 		close(new_fd);              // parent doesn't need this
 	}
-
 	return 0;
 }

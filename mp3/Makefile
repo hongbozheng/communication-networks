@@ -13,7 +13,6 @@ DISTVECOBJECTS = obj/distvec.o
 #TALKEROBJECTS = obj/talker.o
 #LISTENEROBJECTS = obj/listener.o
 
-
 #Every rule listed here as .PHONY is "phony": when you say you want that rule satisfied,
 #Make knows not to bother checking whether the file exists, it just runs the recipes regardless.
 #(Usually used for rules whose targets are conceptual, rather than real files, such as 'clean'.
@@ -33,8 +32,6 @@ all : obj linkstate distvec
 #reliable_receiver: $(SERVEROBJECTS)
 #	$(CPP) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 
-
-
 #So, how does all of this work? This rule is saying 
 #
 #"I am how you make the thing called client. If the thing called client is required, but doesn't 
@@ -50,13 +47,11 @@ linkstate: $(LINKSTATEOBJECTS)
 distvec: $(DISTVECOBJECTS)
 	$(CPP) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 
-
 #talker: $(TALKEROBJECTS)
 #	$(CC) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 
 #listener: $(LISTENEROBJECTS)
 #	$(CC) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
-
 
 #RM is a built-in variable that defaults to "rm -f".
 clean :
@@ -71,4 +66,3 @@ obj/%.o: src/%.cpp
 	$(CPP) $(COMPILERFLAGS) -c -o $@ $<
 obj:
 	mkdir -p obj
-

@@ -1,46 +1,35 @@
-/*
-** client.c -- a stream socket client demo
-*/
+/**
+ * client.c -- a stream socket client demo
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
 #include <netdb.h>
-#include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <assert.h>
-
 #include <arpa/inet.h>
 
 #define LISTENPORT "4950"	// the port users will be connecting to
-
 #define MAXBUFLEN 100
-
-#define PORT "3490" // the port client will be connecting to 
-
+#define PORT "3490" // the port client will be connecting to
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
 // get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
+void *get_in_addr(struct sockaddr *sa) {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	}
-
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int sockfd, numbytes;  
 	char buf[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
-
 
 	// from listener.c
 
@@ -52,8 +41,6 @@ int main(int argc, char *argv[])
 	//struct addrinfo hints_listener, *servinfo_listener, *p_listener;
 	//int rv_listener;
 	//char s_listener[INET6_ADDRSTRLEN];
-
-
 
 	if (argc != 2) {
 	    fprintf(stderr,"usage: client hostname\n");
@@ -82,7 +69,7 @@ int main(int argc, char *argv[])
 			perror("client: connect");
 			continue;
 		}
-		//printf("%d\n",sockfd);l
+		//printf("%d\n",sockfd);
 		break;
 	}
 
@@ -112,15 +99,14 @@ int main(int argc, char *argv[])
 	printf("client: received %.*s bytes",str_position,buf);
 	printf("%s",buf+str_position+2);
 
-
 	close(sockfd);
 
 	// Start of listener Code
 
-	//memset(&hints_listener, 0, sizeof hints_listener);
-	//hints_listener.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
-	//hints_listener.ai_socktype = SOCK_DGRAM;
-	//hints_listener.ai_flags = AI_PASSIVE; // use my IP
+//	memset(&hints_listener, 0, sizeof hints_listener);
+//	hints_listener.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+//	hints_listener.ai_socktype = SOCK_DGRAM;
+//	hints_listener.ai_flags = AI_PASSIVE; // use my IP
 
 //	if ((rv_listener = getaddrinfo(NULL, LISTENPORT, &hints_listener, &servinfo_listener)) != 0) {
 //		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));/
@@ -172,8 +158,5 @@ int main(int argc, char *argv[])
 
 //	close(sockfd_listener);
 
-
-
 	return 0;
 }
-

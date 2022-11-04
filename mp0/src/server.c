@@ -1,13 +1,11 @@
 /*
-** server.c -- a stream socket server demo
-*/
+ * server.c -- a stream socket server demo
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -18,17 +16,14 @@
 
 #define PORT "3490"  // the port users will be connecting to
 #define SERVERPORT "4950" // Server for talking
-
 #define BACKLOG 10	 // how many pending connections queue will hold
 
-void sigchld_handler(int s)
-{
+void sigchld_handler(int s) {
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 // get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
+void *get_in_addr(struct sockaddr *sa) {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	}
@@ -37,8 +32,7 @@ void *get_in_addr(struct sockaddr *sa)
 }
 
 
-char* concat(const char *s1, const char *s2, const char *s3)
-{
+char* concat(const char *s1, const char *s2, const char *s3) {
     char *result = malloc(strlen(s1)+strlen(s2)+strlen(s3)+1);//+1 for the zero-terminator
     //in real code you would check for errors in malloc here
     strcpy(result, s1);
@@ -48,8 +42,7 @@ char* concat(const char *s1, const char *s2, const char *s3)
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 
 	if (argc != 2) {
 	    fprintf(stderr,"File Name not specified\n");
@@ -68,8 +61,7 @@ int main(int argc, char *argv[])
 	fread(string,len,1,fptr);
 	string[len] = 0;
 
-	// Need to send len-1 as length 
-
+	// Need to send len-1 as length
 	//printf("%zu\n",len);	
 
 	const int n_temp = snprintf(NULL, 0, "%lu", len);
@@ -81,22 +73,19 @@ int main(int argc, char *argv[])
 
 	//printf("\n\n%s\n\n",buf_temp);
 
-	if (fptr == NULL)
-        {
-    	    printf("Cannot open file \n");
-    	    exit(0);
-    	}
+	if (fptr == NULL) {
+        printf("Cannot open file \n");
+        exit(0);
+    }
 
-	
 	//while(*string != '\0'){
 	//	printf("%c",*string++);
 	//}		
 
-    	fclose(fptr);	
+    fclose(fptr);
 
 	//printf("\n\n %s \n\n", buf_temp);
 	//printf("\n\n %s", &string[0]);
-
 
 	char* result = concat(buf_temp,"\n\n\n", &string[0]);	
 
@@ -140,11 +129,10 @@ int main(int argc, char *argv[])
 			perror("server: bind");
 			continue;
 		}
-
 		break;
 	}
 
-	if (p == NULL)  {
+	if (p == NULL) {
 		fprintf(stderr, "server: failed to bind\n");
 		return 2;
 	}
@@ -188,7 +176,5 @@ int main(int argc, char *argv[])
 		}
 		close(new_fd);  // parent doesn't need this
 	}
-
 	return 0;
 }
-

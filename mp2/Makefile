@@ -30,8 +30,6 @@ all : obj reliable_sender reliable_receiver
 reliable_receiver: $(SERVEROBJECTS)
 	$(CXX) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 
-
-
 #So, how does all of this work? This rule is saying 
 #
 #"I am how you make the thing called client. If the thing called client is required, but doesn't 
@@ -45,8 +43,6 @@ reliable_receiver: $(SERVEROBJECTS)
 #	$(CC) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 reliable_sender: $(CLIENTOBJECTS)
 	$(CXX) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
-
-
 
 #RM is a built-in variable that defaults to "rm -f".
 clean :
@@ -63,4 +59,3 @@ obj/%.o: src/%.cpp
 	$(CXX) $(COMPILERFLAGS) -c -o $@ $<
 obj:
 	mkdir -p obj
-

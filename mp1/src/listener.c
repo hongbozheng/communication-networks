@@ -1,6 +1,6 @@
 /*
-** listener.c -- a datagram sockets "server" demo
-*/
+ * listener.c -- a datagram sockets "server" demo
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

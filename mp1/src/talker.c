@@ -1,6 +1,6 @@
 /*
-** talker.c -- a datagram "client" demo
-*/
+ * talker.c -- a datagram "client" demo
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -2,7 +2,6 @@
 #include<string.h>
 #include<stdlib.h>
 
-
 int main(int argc, char** argv) {
     //printf("Number of arguments: %d", argc);
     if (argc != 4) {
@@ -16,4 +15,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-

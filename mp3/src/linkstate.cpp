@@ -37,6 +37,13 @@ void create_topo(FILE *fp) {
     printf("[INFO]: Finish reading topology file\n");
 }
 
+void update_cost_tbl() {
+    for (auto n : topo) {
+        std::vector<rtentry_t> fwd_tbl;
+        /* IMPLEMENT DIJKSTRA ALGORITHM */
+    }
+}
+
 void parse_msg(std::ifstream &msg_file) {
     std::string line;
     int src_id, dst_id;

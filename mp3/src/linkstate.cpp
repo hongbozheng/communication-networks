@@ -11,7 +11,7 @@
 
 #include "linkstate.h"
 
-//#define DEBUG
+#define DEBUG
 
 void create_topo(FILE *fp) {
     int src, dst, cost;
@@ -27,7 +27,7 @@ void create_topo(FILE *fp) {
         }
     }
     #ifdef DEBUG
-    printf("\n[DEBUG]: ---------- Topology ----------\n");
+    printf("[DEBUG]: ---------- Topology ----------\n");
     for (auto const &iter1: topo) {
         for (auto const &iter2: iter1.second) {
             src = iter1.first;
@@ -45,25 +45,26 @@ void get_msg(std::ifstream &msg_file) {
     int src, dst;
     msg_t msg;
 
-    printf("[INFO]: Creating message vector..\n");
     while (getline(msg_file, line)) {
         sscanf(line.c_str(), "%d %d %*s", &src, &dst);
         line = line.substr(line.find(' ')+1);
         line = line.substr(line.find(' ')+1);
-        #ifdef DEBUG
-        const char *message = line.c_str();
-        printf("[MSG]:  SRC_ID %d, DST_ID %d, MSG %s\n", src, dst, message);
-        #endif
         msg.src = src;
         msg.dst = dst;
         msg.msg = line;
         msg_vec.push_back(msg);
     }
-    printf("[INFO]: Finish creating message vector\n");
-}
-
-void send_msg() {
-    
+    #ifdef DEBUG
+    printf("[DEBUG]: ---------- Message ----------\n");
+    const char *message;
+    for (auto msg : msg_vec) {
+        src = msg.src;
+        dst = msg.dst;
+        message = msg.msg.c_str();
+        printf("[MSG]:   SRC_ID %d, DST_ID %d, MSG %s\n", src, dst, message);
+    }
+    printf("[DEBUG]: -----------------------------\n");
+    #endif
 }
 
 int main(int argc, char** argv) {

@@ -50,15 +50,9 @@ void dijkstra() {
         printf("[DEBUG]: ********* CUR NODE %d *********\n", cur_node);
         #endif
 
-        std::unordered_set<int> ckd_node;   /* checked node set */
-        /* */
-        std::unordered_map<int, std::unordered_map<int, int>> dist;  /* distance map */
-        std::unordered_map<int, int> prev_nodes;
-        std::unordered_map<int, int> special_prev_nodes;
-
+        ckd_node.clear();
         ckd_node.insert(cur_node);
-        /* <src_id, <dest_id, <cost, next_hop>>> */
-        /* init dist map */
+
         for (const int node: node_set) {
             if (node == cur_node) {
                 fwd_tbl[cur_node][node].first = 0;
@@ -72,94 +66,66 @@ void dijkstra() {
             }
         }
         #ifdef DEBUG
+        printf("[DEBUG]: ---------- FWD_TBL -----------\n");
         for (auto iter1 : fwd_tbl) {
             for (auto iter2 : iter1.second) {
                 printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
             }
         }
         printf("\n");
-//        printf("[DEBUG]: ------ Init Distance Map -----\n");
-//        for (auto iter : dist) {
-//            printf("[DEBUG]: node %d, dist %d\n", iter.first, iter.second);
-//        }
-//        printf("[DEBUG]: ------------------------------\n\n");
         #endif
 
-//        std::queue<int> min_nodes;
-//        for
-//        //Loop all_nodes.size() - 1 times in a round of dijkstra
-//        for (int i = 0; i < num_node-1; i++) {
-//            int min_dist = INT_MAX;
-//            int min_node = INT_MAX;
-//            //Step1: select min node that is not confirmed
-//            for (const int node: node_set) {
-//                if (ckd_node.find(node) == ckd_node.end()) {
-//                    if (dist[node] < min_dist) {
-//                        min_dist = dist[node];
-//                        min_node = node;
-//
-//                    }
-//                    if (dist[node] == min_dist) {
-//                        //Choose the lower ID if there's a tie
-//                        min_node = std::min(min_node, node);
-//                    }
-//                }
-//            }
-//            #ifdef DEBUG
-//            printf("[DEBUG]: ------- CUR MIN_NODE %d -------\n", min_node);
-//            #endif
-//            ckd_node.insert(min_node);
-//            min_nodes.push(min_node);
-//
-//            for (auto nbr: topo[min_node]) {
-//                int nbr_node = nbr.first;
-//                int nbr_cost = nbr.second;
-//                #ifdef DEBUG
-//                printf("[DEBUG]: nbr node %d\n", nbr_node);
-//                #endif
-////                if (confirmed_nodes.count(n_node) > 0) {
-////                    //printf("confirmed\n");
-////                    continue;
-////                }
-//                //printf("\n");
-//                if (ckd_node.find(nbr_node) == ckd_node.end()) {
-//                    if (dist[min_node] != INT_MAX && dist[nbr_node] + nbr_cost < dist[nbr_node]) {
-//                        dist[nbr_node] = dist[min_node] + nbr_cost;
-//                        prev_nodes[nbr_node] = min_node;
-//                    }
-//                    if (dist[min_node] != INT_MAX && dist[min_node] + nbr_cost == dist[nbr_node] && min_node < prev_nodes[nbr_node]) {
-//                        prev_nodes[nbr_node] = min_node;
-//                    }
-//                }
-//            }
-//            #ifdef DEBUG
-//            printf("[DEBUG]: -------- Distance Map --------\n");
-//            for (auto iter : dist) {
-//                printf("[DEBUG]: node %d, dist %d\n", iter.first, iter.second);
-//            }
-//            printf("[DEBUG]: ------------------------------\n\n");
-//            #endif
-//        }
+        for (int i = 0; i < num_node-1; i++) {
+            int min_dist = INT_MAX;
+            int min_node = INT_MAX;
 
-//        std::unordered_map<int, std::pair<int, int>> f_tbl;
-//        f_tbl[cur_node].first = cur_node;
-//        f_tbl[cur_node].second = 0;
-//        while (!min_nodes.empty()) {
-//            int cur = min_nodes.front();
-//            min_nodes.pop();
-//
-//            if (prev_nodes[cur] == cur_node) {
-//                f_tbl[cur].first = cur;
-//                f_tbl[cur].second = dist[cur];
-//            } else {
-//                f_tbl[cur].first = f_tbl[prev_nodes[cur]].first;
-//                f_tbl[cur].second = dist[cur];
-//            }
-//        }
-//        fwd_tbl[cur_node] = f_tbl;
+            for (const int node : node_set) {
+                if (ckd_node.find(node) == ckd_node.end()) {
+                    if (fwd_tbl[cur_node][node].first < min_dist) {
+                        min_dist = fwd_tbl[cur_node][node].first;
+                        min_node = node;
+                    } else if (fwd_tbl[cur_node][node].first == min_dist) {
+                        min_node = std::min(min_node, node);
+                    }
+                }
+            }
+            #ifdef DEBUG
+            printf("[DEBUG]: ------- CUR MIN_NODE %d -------\n", min_node);
+            #endif
 
+            ckd_node.insert(min_node);
+
+            for (auto nbr : topo[min_node]) {
+                int nbr_node = nbr.first;
+                int nbr_cost = nbr.second;
+                if (fwd_tbl[cur_node][min_node].first + nbr_cost < fwd_tbl[cur_node][nbr_node].first) {
+                    fwd_tbl[cur_node][nbr_node].first = fwd_tbl[cur_node][min_node].first + nbr_cost;
+                    fwd_tbl[cur_node][nbr_node].second = min_node;
+                }
+                else if (fwd_tbl[cur_node][min_node].first + nbr_cost == fwd_tbl[cur_node][nbr_node].first) {
+                    fwd_tbl[cur_node][min_node].second = std::min(fwd_tbl[cur_node][min_node].second, min_node);
+                }
+            }
+            #ifdef DEBUG
+            printf("[DEBUG]: ---------- FWD_TBL -----------\n");
+            for (auto iter1 : fwd_tbl) {
+                for (auto iter2 : iter1.second) {
+                    printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
+                }
+            }
+            printf("\n");
+            #endif
+        }
     }
-//    output_table();
+    #ifdef DEBUG
+    printf("[DEBUG]: ------- FINAL FWD_TBL --------\n");
+    for (auto iter1 : fwd_tbl) {
+        for (auto iter2 : iter1.second) {
+            printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
+        }
+    }
+    printf("\n");
+    #endif
 }
 
 void get_msg(std::ifstream &msg_file) {
@@ -208,7 +174,7 @@ int main(int argc, char** argv) {
 
     printf("[INFO]: Start DIJKSTRA ALGORITHM...\n");
     dijkstra();
-    printf("[INFO]: Finish DIJKSTRA ALGORITHM\n");
+    printf("[INFO]: Finish DIJKSTRA ALGORITHM\n\n");
 
     printf("[INFO]: Creating message vector from file %s...\n", argv[2]);
     std::ifstream msg_file;

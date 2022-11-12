@@ -11,10 +11,9 @@
 
 #include "linkstate.h"
 
-#define DEBUG
+//#define DEBUG
 
 void create_topo(FILE *fp) {
-    printf("[INFO]: Creating topology map...\n");
     int src, dst, cost;
     while(fscanf(fp, "%d", &src) != EOF) {
         fscanf(fp, "%d %d", &dst, &cost);
@@ -27,7 +26,6 @@ void create_topo(FILE *fp) {
             node_set.insert(dst);
         }
     }
-    printf("[INFO]: Finish creating topology map\n");
     #ifdef DEBUG
     printf("\n[DEBUG]: ---------- Topology ----------\n");
     for (auto const &iter1: topo) {

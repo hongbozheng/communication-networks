@@ -12,14 +12,16 @@
 #ifndef LINKSTATE_H
 #define LINKSTATE_H
 
-#include <set>              /* node_set_t   */
+#include <unordered_set>    /* node_set_t   */
 #include <unordered_map>    /* topo_t       */
 #include <vector>           /* msg_vec_t    */
-#include <fstream>
+#include <limits.h>         /* INT_MAX      */
+#include <queue>            /* */
+#include <fstream>          /* message_file */
 
-typedef std::set<int> node_set_t;       /* node set */
+typedef std::unordered_set<int> node_set_t;                                                 /* node set */
 typedef std::unordered_map<int, std::unordered_map<int, int>> topo_t;                       /* <src_id, <dst_id, cost>> */
-typedef std::unordered_map<int, std::unordered_map<int, std::pair<int, int>>> fwd_tbl_t;    /* <src_id, <dest_id, <next_hop, cost>>> */
+typedef std::unordered_map<int, std::unordered_map<int, std::pair<int, int>>> fwd_tbl_t;    /* <src_id, <dest_id, <cost, next_hop>>> */
 typedef struct msg {
     int src;                            /* src node id  */
     int dst;                            /* dest node id */

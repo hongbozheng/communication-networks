@@ -13,20 +13,11 @@
 
 #define DEBUG
 
-bool check_src_dst(int src, int dst, const topo_t topo) {
-    auto src_iter = topo.find(src);
-    auto dst_iter = src_iter->second.find(dst);
-    return !(dst_iter == src_iter->second.end());
-}
-
-void create_topo(FILE *fp, topo_t &topo, fwd_tbl_t &fwd_tbl) {
+void create_topo(FILE *fp) {
     printf("[INFO]: Creating topology map...\n");
     int src, dst, cost;
     while(fscanf(fp, "%d", &src) != EOF) {
         fscanf(fp, "%d %d", &dst, &cost);
-        #ifdef DEBUG
-        printf("[TOPO]: SRC %d, DST %d, COST %d\n", src, dst, cost);
-        #endif
         topo[src][dst] = cost;
         topo[dst][src] = cost;
         if (node_set.find(src) == node_set.end()) {
@@ -37,30 +28,19 @@ void create_topo(FILE *fp, topo_t &topo, fwd_tbl_t &fwd_tbl) {
         }
     }
     printf("[INFO]: Finish creating topology map\n");
-
-    printf("[INFO]: Creating forward table...\n");
-    for (auto i = node_set.begin(); i != node_set.end(); ++i) {
-        src = *i;
-        for (auto k = node_set.begin(); k != node_set.end(); ++k) {
-            dst = *i;
-            if (src == dst) {
-                topo[src][dst] = 0;
-            }
-            if (!check_src_dst(src, dst, topo)) {
-                topo[src][dst] = -999;
-            }
-            fwd_tbl[src][dst] = std::make_pair(src, topo[src][dst]);
+    #ifdef DEBUG
+    printf("\n[DEBUG]: ---------- Topology ----------\n");
+    for (auto const &iter1: topo) {
+        for (auto const &iter2: iter1.second) {
+            src = iter1.first;
+            dst = iter2.first;
+            cost = iter2.second;
+            printf("[TOPO]:  SRC %d, DST %d, COST %d\n", src, dst, cost);
         }
     }
-    printf("[INFO]: Finish creating forward table...\n");
+    printf("[DEBUG]: ----------------------------\n");
+    #endif
 }
-
-//void update_cost_tbl() {
-//    for (auto n : topo) {
-//        std::vector<rtentry_t> fwd_tbl;
-//        /* IMPLEMENT DIJKSTRA ALGORITHM */
-//    }
-//}
 
 void get_msg(std::ifstream &msg_file) {
     std::string line;
@@ -84,6 +64,10 @@ void get_msg(std::ifstream &msg_file) {
     printf("[INFO]: Finish creating message vector\n");
 }
 
+void send_msg() {
+    
+}
+
 int main(int argc, char** argv) {
     //printf("Number of arguments: %d", argc);
     if (argc != 4) {
@@ -91,15 +75,15 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    printf("[INFO]: Creating topology map & forward table from file %s...\n", argv[1]);
+    printf("[INFO]: Creating topology from file %s...\n", argv[1]);
     FILE *topo_fp = fopen(argv[1], "r");
     if (topo_fp == NULL) {
         printf("[ERROR]: Failed to open file %s\n", argv[1]);
         exit(EXIT_FAILURE);
     }
-    create_topo(topo_fp, topo, fwd_tbl);
+    create_topo(topo_fp);
     fclose(topo_fp);
-    printf("[INFO]: Finish creating topology map & forward table from file %s\n\n", argv[1]);
+    printf("[INFO]: Finish creating topology from file %s\n\n", argv[1]);
 
     printf("[INFO]: Creating message vector from file %s...\n", argv[2]);
     std::ifstream msg_file;

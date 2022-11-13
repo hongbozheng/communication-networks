@@ -15,7 +15,7 @@
 
 void create_topo(FILE *fp) {
     int src, dst, cost;
-    while(fscanf(fp, "%d", &src) != EOF) {
+    while (fscanf(fp, "%d", &src) != EOF) {
         fscanf(fp, "%d %d", &dst, &cost);
         topo[src][dst] = cost;
         topo[dst][src] = cost;
@@ -176,8 +176,8 @@ void send_msg(FILE *fp) {
         dst = nxt_hop = msg.dst;
         message = msg.msg.c_str();
 
-        if ((fwd_tbl[src][dst].first == INT_MAX) || (node_set.find(src) == node_set.end()) ||
-            (node_set.find(dst) == node_set.end())) {
+        if (fwd_tbl[src][dst].first == INT_MAX || node_set.find(src) == node_set.end() ||
+            node_set.find(dst) == node_set.end()) {
             fprintf(fp, "from %d to %d cost infinite hops unreachable message %s\n", src, dst, message);
             continue;
         }
@@ -202,8 +202,40 @@ void send_msg(FILE *fp) {
     }
 }
 
-void update_fwd_tbl(FILE *chg_fp, FILE *msg_fp) {
-
+void update_fwd_tbl(FILE *chg_fp, FILE *output_fp) {
+    int src, dst, cost;
+    while (fscanf(chg_fp, "%d", &src) != EOF) {
+        fscanf(chg_fp, "%d %d", &dst, &cost);
+        if (src == 0 || dst == 0 || cost == 0) continue;
+        if (cost == -999) {
+            topo[src].erase(dst);
+            topo[dst].erase(src);
+            if (topo.find(src) == topo.end()) {
+                node_set.erase(src);
+            }
+            if (topo.find(dst) == topo.end()) {
+                node_set.erase(dst);
+            }
+        } else {
+            topo[src][dst] = cost;
+            topo[dst][src] = cost;
+            node_set.insert(src);
+            node_set.insert(dst);
+        }
+        dijkstra();
+        w_fwd_tbl(output_fp);
+        send_msg(output_fp);
+    }
+//    #ifdef DEBUG
+//    printf("[DEBUG]: ---------- TOPOLOGY ----------\n");
+//    for (auto const &iter1: topo) {
+//        for (auto const &iter2: iter1.second) {
+//            src = iter1.first;
+//            dst = iter2.first;
+//            cost = iter2.second;
+//            printf("[TOPO]:  src %d, dst %d, cost %d\n", src, dst, cost);
+//        }
+//    }
 }
 
 int main(int argc, char** argv) {
@@ -249,11 +281,11 @@ int main(int argc, char** argv) {
     printf("[INFO]: Start sending message(s)...\n");
     send_msg(output_fp);
     printf("[INFO]: Finish sending message(s)\n\n");
+
+    printf("[INFO]: Apply changes from file %s\n", argv[3]);
+    FILE *chg_fp = fopen(argv[3], "r");
+    update_fwd_tbl(chg_fp, output_fp);
+    printf("[INFO]: Finish applying changes from file %s\n", argv[3]);
     fclose(output_fp);
-
-    printf("[INFO]: Apply changes from file %s", argv[3]);
-    FILE *chg_fp = fopen()
-    printf("[INFO]: Finish applying changes from file %s", argv[3]);
-
     return 0;
 }

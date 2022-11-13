@@ -11,7 +11,7 @@
 
 #include "distvec.h"
 
-//#define DEBUG
+#define DEBUG
 
 void create_topo(FILE *fp) {
     int src, dst, cost;
@@ -28,7 +28,7 @@ void create_topo(FILE *fp) {
             }
         }
     }
-#ifdef DEBUG
+    #ifdef DEBUG
     printf("[DEBUG]: ---------- NODE_SET ----------\n[DEBUG]: ");
     for (const auto node : node_set) {
         printf("%d ", node);
@@ -43,7 +43,7 @@ void create_topo(FILE *fp) {
         }
     }
     printf("[DEBUG]: ------------------------------\n");
-#endif
+    #endif
 }
 
 void dijkstra() {
@@ -51,9 +51,9 @@ void dijkstra() {
     fwd_tbl.clear();
 
     for (const int cur_node: node_set) {
-#ifdef DEBUG
+        #ifdef DEBUG
         printf("[DEBUG]: ********* CUR NODE %d *********\n", cur_node);
-#endif
+        #endif
 
         ckd_node.clear();
         ckd_node.insert(cur_node);
@@ -70,7 +70,7 @@ void dijkstra() {
                 fwd_tbl[cur_node][node].second = INT_MAX;
             }
         }
-#ifdef DEBUG
+        #ifdef DEBUG
         printf("[DEBUG]: ---------- FWD_TBL -----------\n");
         for (const auto iter1 : fwd_tbl) {
             for (const auto iter2 : iter1.second) {
@@ -78,7 +78,7 @@ void dijkstra() {
             }
         }
         printf("\n");
-#endif
+        #endif
 
         for (int i = 0; i < num_node-1; i++) {
             if (node_set.size() == ckd_node.size()) break;
@@ -96,25 +96,25 @@ void dijkstra() {
                     }
                 }
             }
-#ifdef DEBUG
+            #ifdef DEBUG
             printf("[DEBUG]: ------- CUR MIN_NODE %d -------\n", min_node);
-#endif
+            #endif
 
             ckd_node.insert(min_node);
 
             for (auto nbr : topo[min_node]) {
                 int nbr_node = nbr.first;
                 int nbr_cost = nbr.second;
-#ifdef DEBUG
+                #ifdef DEBUG
                 printf("[DEBUG]: nbr_node %d, cost %d\n", nbr_node, nbr_cost);
-#endif
+                #endif
                 if (fwd_tbl[cur_node][min_node].first != INT_MAX &&
                     fwd_tbl[cur_node][min_node].first + nbr_cost < fwd_tbl[cur_node][nbr_node].first) {
                     fwd_tbl[cur_node][nbr_node].first = fwd_tbl[cur_node][min_node].first + nbr_cost;
                     fwd_tbl[cur_node][nbr_node].second = min_node;
                 }
             }
-#ifdef DEBUG
+            #ifdef DEBUG
             printf("[DEBUG]: ---------- FWD_TBL -----------\n");
             for (const auto iter1 : fwd_tbl) {
                 for (const auto iter2 : iter1.second) {
@@ -122,10 +122,10 @@ void dijkstra() {
                 }
             }
             printf("\n");
-#endif
+            #endif
         }
     }
-#ifdef DEBUG
+    #ifdef DEBUG
     printf("[DEBUG]: ------- FINAL FWD_TBL --------\n");
     for (const auto iter1 : fwd_tbl) {
         for (const auto iter2 : iter1.second) {
@@ -133,7 +133,7 @@ void dijkstra() {
         }
     }
     printf("\n");
-#endif
+    #endif
 }
 
 void w_fwd_tbl(FILE *fp) {
@@ -231,7 +231,7 @@ void update_fwd_tbl(FILE *chg_fp, FILE *output_fp) {
                 topo[dst][src] = cost;
             }
         }
-#ifdef DEBUG
+        #ifdef DEBUG
         printf("[DEBUG]: ---------- NODE_SET ----------\n[DEBUG]: ");
         for (const auto node : node_set) {
             printf("%d ", node);
@@ -246,7 +246,7 @@ void update_fwd_tbl(FILE *chg_fp, FILE *output_fp) {
             }
         }
         printf("\n");
-#endif
+        #endif
         dijkstra();
         w_fwd_tbl(output_fp);
         send_msg(output_fp);

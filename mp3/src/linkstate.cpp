@@ -43,8 +43,7 @@ void create_topo(FILE *fp) {
 void dijkstra() {
     int num_node = node_set.size();
     fwd_tbl.clear();
-
-    /* get fwd_tbl of all nodes in node_set */
+    
     for (const int cur_node: node_set) {
         #ifdef DEBUG
         printf("[DEBUG]: ********* CUR NODE %d *********\n", cur_node);

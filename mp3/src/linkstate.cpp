@@ -128,15 +128,11 @@ void dijkstra() {
     #endif
 }
 
-int get_next_hop(const int src, const int dst) {
-    return fwd_tbl[dst][src].second;
-}
-
 void w_fwd_tbl(FILE *fp) {
-    int dst, cost, nxt_hop;
+    int nxt_hop;
     for (const auto src : node_set) {
         for (const auto dst : node_set) {
-            nxt_hop = get_next_hop(src, dst);
+            nxt_hop = fwd_tbl[dst][src].second;
             fprintf(fp, "%d %d %d\n", dst, nxt_hop, fwd_tbl[src][dst].first);
         }
     }

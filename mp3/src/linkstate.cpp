@@ -101,6 +101,9 @@ void dijkstra() {
             for (auto nbr : topo[min_node]) {
                 int nbr_node = nbr.first;
                 int nbr_cost = nbr.second;
+                #ifdef DEBUG
+                printf("[DEBUG]: nbr_node %d, cost %d\n", nbr_node, nbr_cost);
+                #endif
                 if (fwd_tbl[cur_node][min_node].first != INT_MAX &&
                     fwd_tbl[cur_node][min_node].first + nbr_cost < fwd_tbl[cur_node][nbr_node].first) {
                     fwd_tbl[cur_node][nbr_node].first = fwd_tbl[cur_node][min_node].first + nbr_cost;
@@ -111,15 +114,15 @@ void dijkstra() {
                     fwd_tbl[cur_node][nbr_node].second = std::min(fwd_tbl[cur_node][nbr_node].second, min_node);
                 }
             }
-//            #ifdef DEBUG
-//            printf("[DEBUG]: ---------- FWD_TBL -----------\n");
-//            for (const auto iter1 : fwd_tbl) {
-//                for (const auto iter2 : iter1.second) {
-//                    printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
-//                }
-//            }
-//            printf("\n");
-//            #endif
+            #ifdef DEBUG
+            printf("[DEBUG]: ---------- FWD_TBL -----------\n");
+            for (const auto iter1 : fwd_tbl) {
+                for (const auto iter2 : iter1.second) {
+                    printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
+                }
+            }
+            printf("\n");
+            #endif
         }
     }
     #ifdef DEBUG
@@ -137,8 +140,10 @@ void w_fwd_tbl(FILE *fp) {
     int nxt_hop;
     for (const auto src : node_set) {
         for (const auto dst : node_set) {
-            nxt_hop = fwd_tbl[dst][src].second;
-            fprintf(fp, "%d %d %d\n", dst, nxt_hop, fwd_tbl[src][dst].first);
+            if (fwd_tbl[src][dst].first != INT_MAX) {
+                nxt_hop = fwd_tbl[dst][src].second;
+                fprintf(fp, "%d %d %d\n", dst, nxt_hop, fwd_tbl[src][dst].first);
+            }
         }
     }
 }

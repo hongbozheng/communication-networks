@@ -43,7 +43,7 @@ void create_topo(FILE *fp) {
 void dijkstra() {
     int num_node = node_set.size();
     fwd_tbl.clear();
-    
+
     for (const int cur_node: node_set) {
         #ifdef DEBUG
         printf("[DEBUG]: ********* CUR NODE %d *********\n", cur_node);
@@ -97,11 +97,13 @@ void dijkstra() {
             for (auto nbr : topo[min_node]) {
                 int nbr_node = nbr.first;
                 int nbr_cost = nbr.second;
-                if (fwd_tbl[cur_node][min_node].first + nbr_cost < fwd_tbl[cur_node][nbr_node].first) {
+                if (fwd_tbl[cur_node][min_node].first != INT_MAX &&
+                    fwd_tbl[cur_node][min_node].first + nbr_cost < fwd_tbl[cur_node][nbr_node].first) {
                     fwd_tbl[cur_node][nbr_node].first = fwd_tbl[cur_node][min_node].first + nbr_cost;
                     fwd_tbl[cur_node][nbr_node].second = min_node;
                 }
-                else if (fwd_tbl[cur_node][min_node].first + nbr_cost == fwd_tbl[cur_node][nbr_node].first) {
+                else if (fwd_tbl[cur_node][min_node].first != INT_MAX &&
+                         fwd_tbl[cur_node][min_node].first + nbr_cost == fwd_tbl[cur_node][nbr_node].first) {
                     fwd_tbl[cur_node][min_node].second = std::min(fwd_tbl[cur_node][min_node].second, min_node);
                 }
             }

@@ -17,13 +17,15 @@ void create_topo(FILE *fp) {
     int src, dst, cost;
     while (fscanf(fp, "%d", &src) != EOF) {
         fscanf(fp, "%d %d", &dst, &cost);
-        topo[src][dst] = cost;
-        topo[dst][src] = cost;
-        if (node_set.find(src) == node_set.end()) {
-            node_set.insert(src);
-        }
-        if (node_set.find(dst) == node_set.end()) {
-            node_set.insert(dst);
+        if (src != dst || cost != 0) {
+            topo[src][dst] = cost;
+            topo[dst][src] = cost;
+            if (node_set.find(src) == node_set.end()) {
+                node_set.insert(src);
+            }
+            if (node_set.find(dst) == node_set.end()) {
+                node_set.insert(dst);
+            }
         }
     }
     #ifdef DEBUG
@@ -79,6 +81,8 @@ void dijkstra() {
         #endif
 
         for (int i = 0; i < num_node-1; i++) {
+            if (node_set.size() == ckd_node.size()) break;
+
             int min_dist = INT_MAX;
             int min_node = INT_MAX;
 
@@ -108,10 +112,6 @@ void dijkstra() {
                     fwd_tbl[cur_node][min_node].first + nbr_cost < fwd_tbl[cur_node][nbr_node].first) {
                     fwd_tbl[cur_node][nbr_node].first = fwd_tbl[cur_node][min_node].first + nbr_cost;
                     fwd_tbl[cur_node][nbr_node].second = min_node;
-                }
-                else if (fwd_tbl[cur_node][min_node].first != INT_MAX &&
-                         fwd_tbl[cur_node][min_node].first + nbr_cost == fwd_tbl[cur_node][nbr_node].first) {
-                    fwd_tbl[cur_node][nbr_node].second = std::min(fwd_tbl[cur_node][nbr_node].second, min_node);
                 }
             }
             #ifdef DEBUG
@@ -216,17 +216,18 @@ void update_fwd_tbl(FILE *chg_fp, FILE *output_fp) {
     int src, dst, cost;
     while (fscanf(chg_fp, "%d", &src) != EOF) {
         fscanf(chg_fp, "%d %d", &dst, &cost);
-        if (src == 0 || dst == 0 || cost == 0) continue;
-        if (cost == -999) {
-            if (topo[src].find(dst) != topo[src].end()) {
-                topo[src].erase(dst);
+        if (src != dst && cost != 0 ) {
+            if (cost == -999) {
+                if (topo[src].find(dst) != topo[src].end()) {
+                    topo[src].erase(dst);
+                }
+                if (topo[dst].find(src) != topo[dst].end()) {
+                    topo[dst].erase(src);
+                }
+            } else {
+                topo[src][dst] = cost;
+                topo[dst][src] = cost;
             }
-            if (topo[dst].find(src) != topo[dst].end()) {
-                topo[dst].erase(src);
-            }
-        } else {
-            topo[src][dst] = cost;
-            topo[dst][src] = cost;
         }
         #ifdef DEBUG
         printf("[DEBUG]: ---------- NODE_SET ----------\n[DEBUG]: ");

@@ -45,7 +45,7 @@ void dijkstra() {
     fwd_tbl.clear();
 
     /* get fwd_tbl of all nodes in node_set */
-    for (int cur_node: node_set) {
+    for (const int cur_node: node_set) {
         #ifdef DEBUG
         printf("[DEBUG]: ********* CUR NODE %d *********\n", cur_node);
         #endif
@@ -67,8 +67,8 @@ void dijkstra() {
         }
         #ifdef DEBUG
         printf("[DEBUG]: ---------- FWD_TBL -----------\n");
-        for (auto iter1 : fwd_tbl) {
-            for (auto iter2 : iter1.second) {
+        for (const auto iter1 : fwd_tbl) {
+            for (const auto iter2 : iter1.second) {
                 printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
             }
         }
@@ -108,8 +108,8 @@ void dijkstra() {
             }
             #ifdef DEBUG
             printf("[DEBUG]: ---------- FWD_TBL -----------\n");
-            for (auto iter1 : fwd_tbl) {
-                for (auto iter2 : iter1.second) {
+            for (const auto iter1 : fwd_tbl) {
+                for (const auto iter2 : iter1.second) {
                     printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
                 }
             }
@@ -119,8 +119,8 @@ void dijkstra() {
     }
     #ifdef DEBUG
     printf("[DEBUG]: ------- FINAL FWD_TBL --------\n");
-    for (auto iter1 : fwd_tbl) {
-        for (auto iter2 : iter1.second) {
+    for (const auto iter1 : fwd_tbl) {
+        for (const auto iter2 : iter1.second) {
             printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
         }
     }
@@ -165,11 +165,45 @@ void get_msg(std::ifstream &msg_file) {
     #endif
 }
 
-
-
 void send_msg(FILE *fp) {
-//    int nxt_hop = fwd_tbl[]
-//    fprintf("")
+    int src, dst, nxt_hop;
+    std::deque<int> route;
+    const char *message;
+
+    for (const auto msg : msg_vec) {
+        route.clear();
+        src = msg.src;
+        dst = nxt_hop = msg.dst;
+        message = msg.msg.c_str();
+
+        if ((fwd_tbl[src][dst].first == INT_MAX) || (node_set.find(src) == node_set.end()) ||
+            (node_set.find(dst) == node_set.end())) {
+            fprintf(fp, "from %d to %d cost infinite hops unreachable message %s\n", src, dst, message);
+            continue;
+        }
+
+        do {
+            nxt_hop = fwd_tbl[src][nxt_hop].second;
+            route.push_front(nxt_hop);
+        } while (nxt_hop != src);
+        #ifdef DEBUG
+        printf("[DEBUG]: ------------ ROUTE -----------\n[DEBUG]: ");
+        for (const auto node : route) {
+            printf("%d ", node);
+        }
+        printf("\n[DEBUG]: ------------------------------\n\n");
+        #endif
+
+        fprintf(fp, "from %d to %d cost %d hops ", src, dst, fwd_tbl[src][dst].first);
+        for (const auto node : route) {
+            fprintf(fp, "%d ", node);
+        }
+        fprintf(fp, "message %s\n", message);
+    }
+}
+
+void update_fwd_tbl(FILE *chg_fp, FILE *msg_fp) {
+
 }
 
 int main(int argc, char** argv) {
@@ -203,17 +237,23 @@ int main(int argc, char** argv) {
     msg_file.close();
     printf("[INFO]: Finish creating message vector from file %s\n\n", argv[2]);
 
-    printf("[INFO]: Start sending message(s)...\n");
-    FILE *output_fp;
-    output_fp = fopen(OUTPUT_FILENAME, "w");
+    FILE *output_fp = fopen(OUTPUT_FILENAME, "w");
     if (output_fp == NULL) {
         printf("[ERROR]: Failed to open file %s\n", OUTPUT_FILENAME);
         exit(EXIT_FAILURE);
     }
+    printf("[INFO]: Start writing forward_table...\n");
     w_fwd_tbl(output_fp);
+    printf("[INFO]: Finish writing forward_table...\n\n");
+
+    printf("[INFO]: Start sending message(s)...\n");
     send_msg(output_fp);
+    printf("[INFO]: Finish sending message(s)\n\n");
     fclose(output_fp);
-    printf("[INFO]: Finish sending message(s)\n");
+
+    printf("[INFO]: Apply changes from file %s", argv[3]);
+    FILE *chg_fp = fopen()
+    printf("[INFO]: Finish applying changes from file %s", argv[3]);
 
     return 0;
 }

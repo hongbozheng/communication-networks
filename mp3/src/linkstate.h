@@ -17,7 +17,7 @@
 #include <vector>           /* msg_vec_t    */
 #include <limits.h>         /* INT_MAX      */
 #include <unordered_set>    /* ckd_node_t   */
-#include <deque>
+#include <deque>            /* msg route    */
 #include <fstream>          /* message_file */
 
 #define OUTPUT_FILENAME "output.txt"

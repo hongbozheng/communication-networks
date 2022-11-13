@@ -162,7 +162,7 @@ void get_msg(std::ifstream &msg_file) {
         msg.msg = line;
         msg_vec.push_back(msg);
     }
-#ifdef DEBUG
+    #ifdef DEBUG
     printf("[DEBUG]: ---------- Message ----------\n");
     const char *message;
     for (auto msg : msg_vec) {
@@ -172,7 +172,7 @@ void get_msg(std::ifstream &msg_file) {
         printf("[MSG]:   SRC_ID %d, DST_ID %d, MSG %s\n", src, dst, message);
     }
     printf("[DEBUG]: -----------------------------\n");
-#endif
+    #endif
 }
 
 void send_msg(FILE *fp) {
@@ -196,13 +196,13 @@ void send_msg(FILE *fp) {
             nxt_hop = fwd_tbl[src][nxt_hop].second;
             route.push_front(nxt_hop);
         } while (nxt_hop != src);
-#ifdef DEBUG
+        #ifdef DEBUG
         printf("[DEBUG]: ------------ ROUTE -----------\n[DEBUG]: ");
         for (const auto node : route) {
             printf("%d ", node);
         }
         printf("\n[DEBUG]: ------------------------------\n\n");
-#endif
+        #endif
 
         fprintf(fp, "from %d to %d cost %d hops ", src, dst, fwd_tbl[src][dst].first);
         for (const auto node : route) {

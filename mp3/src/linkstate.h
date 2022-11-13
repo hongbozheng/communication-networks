@@ -12,14 +12,17 @@
 #ifndef LINKSTATE_H
 #define LINKSTATE_H
 
-#include <unordered_set>    /* node_set_t   */
+#include <set>              /* node_set_t   */
 #include <unordered_map>    /* topo_t       */
 #include <vector>           /* msg_vec_t    */
 #include <limits.h>         /* INT_MAX      */
-#include <queue>            /* */
+#include <unordered_set>    /* ckd_node_t   */
+#include <deque>
 #include <fstream>          /* message_file */
 
-typedef std::unordered_set<int> node_set_t;                                                 /* node set */
+#define OUTPUT_FILENAME "output.txt"
+
+typedef std::set<int> node_set_t;                                                           /* node set */
 typedef std::unordered_map<int, std::unordered_map<int, int>> topo_t;                       /* <src_id, <dst_id, cost>> */
 typedef std::unordered_map<int, std::unordered_map<int, std::pair<int, int>>> fwd_tbl_t;    /* <src_id, <dst_id, <cost, next_hop>>> */
 typedef std::unordered_set<int> ckd_node_t;                                                 /* checked node set */

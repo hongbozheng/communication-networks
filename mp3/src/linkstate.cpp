@@ -128,6 +128,20 @@ void dijkstra() {
     #endif
 }
 
+int get_next_hop(const int src, const int dst) {
+    return fwd_tbl[dst][src].second;
+}
+
+void w_fwd_tbl(FILE *fp) {
+    int dst, cost, nxt_hop;
+    for (const auto src : node_set) {
+        for (const auto dst : node_set) {
+            nxt_hop = get_next_hop(src, dst);
+            fprintf(fp, "%d %d %d\n", dst, nxt_hop, fwd_tbl[src][dst].first);
+        }
+    }
+}
+
 void get_msg(std::ifstream &msg_file) {
     std::string line;
     int src, dst;
@@ -155,8 +169,14 @@ void get_msg(std::ifstream &msg_file) {
     #endif
 }
 
+
+
+void send_msg(FILE *fp) {
+//    int nxt_hop = fwd_tbl[]
+//    fprintf("")
+}
+
 int main(int argc, char** argv) {
-    //printf("Number of arguments: %d", argc);
     if (argc != 4) {
         printf("[USAGE]: ./linkstate <topology_file> <message_file> <changes_file>\n");
         return -1;
@@ -185,14 +205,19 @@ int main(int argc, char** argv) {
     }
     get_msg(msg_file);
     msg_file.close();
-    printf("[INFO]: Finish creating message vector from file %s\n", argv[2]);
+    printf("[INFO]: Finish creating message vector from file %s\n\n", argv[2]);
 
-
-
-    FILE *fpOut;
-    fpOut = fopen("output.txt", "w");
-    fclose(fpOut);
-
+    printf("[INFO]: Start sending message(s)...\n");
+    FILE *output_fp;
+    output_fp = fopen(OUTPUT_FILENAME, "w");
+    if (output_fp == NULL) {
+        printf("[ERROR]: Failed to open file %s\n", OUTPUT_FILENAME);
+        exit(EXIT_FAILURE);
+    }
+    w_fwd_tbl(output_fp);
+    send_msg(output_fp);
+    fclose(output_fp);
+    printf("[INFO]: Finish sending message(s)\n");
 
     return 0;
 }

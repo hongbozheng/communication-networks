@@ -27,9 +27,13 @@ void create_topo(FILE *fp) {
         }
     }
     #ifdef DEBUG
-    printf("[DEBUG]: ---------- TOPOLOGY ----------\n");
-    for (auto const &iter1: topo) {
-        for (auto const &iter2: iter1.second) {
+    printf("[DEBUG]: ---------- NODE_SET ----------\n[DEBUG]: ");
+    for (const auto node : node_set) {
+        printf("%d ", node);
+    }
+    printf("\n[DEBUG]: ---------- TOPOLOGY ----------\n");
+    for (auto const iter1: topo) {
+        for (auto const iter2: iter1.second) {
             src = iter1.first;
             dst = iter2.first;
             cost = iter2.second;
@@ -104,18 +108,18 @@ void dijkstra() {
                 }
                 else if (fwd_tbl[cur_node][min_node].first != INT_MAX &&
                          fwd_tbl[cur_node][min_node].first + nbr_cost == fwd_tbl[cur_node][nbr_node].first) {
-                    fwd_tbl[cur_node][min_node].second = std::min(fwd_tbl[cur_node][min_node].second, min_node);
+                    fwd_tbl[cur_node][nbr_node].second = std::min(fwd_tbl[cur_node][nbr_node].second, min_node);
                 }
             }
-            #ifdef DEBUG
-            printf("[DEBUG]: ---------- FWD_TBL -----------\n");
-            for (const auto iter1 : fwd_tbl) {
-                for (const auto iter2 : iter1.second) {
-                    printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
-                }
-            }
-            printf("\n");
-            #endif
+//            #ifdef DEBUG
+//            printf("[DEBUG]: ---------- FWD_TBL -----------\n");
+//            for (const auto iter1 : fwd_tbl) {
+//                for (const auto iter2 : iter1.second) {
+//                    printf("[DEBUG]: src %d, dst %d, cost %d, next_hop %d\n", iter1.first, iter2.first, iter2.second.first, iter2.second.second);
+//                }
+//            }
+//            printf("\n");
+//            #endif
         }
     }
     #ifdef DEBUG
@@ -209,34 +213,36 @@ void update_fwd_tbl(FILE *chg_fp, FILE *output_fp) {
         fscanf(chg_fp, "%d %d", &dst, &cost);
         if (src == 0 || dst == 0 || cost == 0) continue;
         if (cost == -999) {
-            topo[src].erase(dst);
-            topo[dst].erase(src);
-            if (topo.find(src) == topo.end()) {
-                node_set.erase(src);
+            if (topo[src].find(dst) != topo[src].end()) {
+                topo[src].erase(dst);
             }
-            if (topo.find(dst) == topo.end()) {
-                node_set.erase(dst);
+            if (topo[dst].find(src) != topo[dst].end()) {
+                topo[dst].erase(src);
             }
         } else {
             topo[src][dst] = cost;
             topo[dst][src] = cost;
-            node_set.insert(src);
-            node_set.insert(dst);
         }
+        #ifdef DEBUG
+        printf("[DEBUG]: ---------- NODE_SET ----------\n[DEBUG]: ");
+        for (const auto node : node_set) {
+            printf("%d ", node);
+        }
+        printf("\n[DEBUG]: ---------- TOPOLOGY ----------\n");
+        for (auto const iter1: topo) {
+            for (auto const iter2: iter1.second) {
+                src = iter1.first;
+                dst = iter2.first;
+                cost = iter2.second;
+                printf("[TOPO]:  src %d, dst %d, cost %d\n", src, dst, cost);
+            }
+        }
+        printf("\n");
+        #endif
         dijkstra();
         w_fwd_tbl(output_fp);
         send_msg(output_fp);
     }
-//    #ifdef DEBUG
-//    printf("[DEBUG]: ---------- TOPOLOGY ----------\n");
-//    for (auto const &iter1: topo) {
-//        for (auto const &iter2: iter1.second) {
-//            src = iter1.first;
-//            dst = iter2.first;
-//            cost = iter2.second;
-//            printf("[TOPO]:  src %d, dst %d, cost %d\n", src, dst, cost);
-//        }
-//    }
 }
 
 int main(int argc, char** argv) {

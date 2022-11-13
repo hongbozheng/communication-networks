@@ -1,7 +1,7 @@
 /**
- * FILENAME: linkstate.h
+ * FILENAME: distvec.h
  *
- * DESCRIPTION: linkstate header file
+ * DESCRIPTION: distvec header file
  *
  * DATE: Saturday, Nov 5, 2022
  *
@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef LINKSTATE_H
-#define LINKSTATE_H
+#ifndef DISTVEC_H
+#define DISTVEC_H
 
 #include <set>              /* node_set_t   */
 #include <unordered_map>    /* topo_t       */

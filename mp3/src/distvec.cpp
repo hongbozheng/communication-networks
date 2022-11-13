@@ -1,5 +1,5 @@
 /**
- * FILENAME: linkstate.cpp
+ * FILENAME: distvec.cpp
  *
  * DESCRIPTION:
  *
@@ -9,7 +9,7 @@
  *
  */
 
-#include "linkstate.h"
+#include "distvec.h"
 
 //#define DEBUG
 

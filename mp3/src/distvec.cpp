@@ -218,8 +218,6 @@ void update_fwd_tbl(FILE *chg_fp, FILE *output_fp) {
         fscanf(chg_fp, "%d %d", &dst, &cost);
         if (src != dst && cost != 0 ) {
             if (cost == -999) {
-                topo[src][dst] = INT_MAX;
-                topo[dst][src] = INT_MAX;
                 if (topo[src].find(dst) != topo[src].end()) {
                     topo[src].erase(dst);
                 }

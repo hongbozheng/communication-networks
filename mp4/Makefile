@@ -32,8 +32,6 @@ all : obj csma
 #reliable_receiver: $(SERVEROBJECTS)
 #	$(CPP) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 
-
-
 #So, how does all of this work? This rule is saying 
 #
 #"I am how you make the thing called client. If the thing called client is required, but doesn't 
@@ -46,13 +44,11 @@ all : obj csma
 csma: $(CSMAOBJECTS)
 	$(CPP) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 
-
 #talker: $(TALKEROBJECTS)
 #	$(CC) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
 
 #listener: $(LISTENEROBJECTS)
 #	$(CC) $(COMPILERFLAGS) $^ -o $@ $(LINKLIBS)
-
 
 #RM is a built-in variable that defaults to "rm -f".
 clean :
@@ -67,4 +63,3 @@ obj/%.o: src/%.cpp
 	$(CPP) $(COMPILERFLAGS) -c -o $@ $<
 obj:
 	mkdir -p obj
-

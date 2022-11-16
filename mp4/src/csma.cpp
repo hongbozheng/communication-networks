@@ -13,6 +13,5 @@ int main(int argc, char** argv) {
     fpOut = fopen("output.txt", "w");
     fclose(fpOut);
     
-
     return 0;
 }

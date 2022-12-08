@@ -96,12 +96,16 @@ int main(int argc, char** argv) {
     input_file.close();
     printf("[INFO]: Finish reading input file %s\n\n", argv[1]);
 
-    printf("[INFO]: ----- Start Simulation -----\n");
+    printf("[INFO]: Start Simulation...\n");
     run_sim();
+    printf("[INFO]: Finish Simulation\n");
 
-    FILE *fpOut;
-    fpOut = fopen("output.txt", "w");
-    fclose(fpOut);
+    FILE *output_fp = fopen("output.txt", "w");
+    if (output_fp == NULL) {
+        printf("[ERROR]: Failed to open output file output.txt\n");
+        exit(EXIT_FAILURE);
+    }
+    fclose(output_fp);
 
     return 0;
 }

@@ -22,12 +22,12 @@ public:
 
     Node();
 
-    Node(int bo, int num_collision, int num_tran, int collision_cnt, int number_drop) {
-        backoff = bo;
-        num_coll = num_collision;
-        num_tx = num_tran;
-        coll_cnt = collision_cnt;
-        num_drop = number_drop;
+    Node(int backoff, int num_coll, int num_tx, int coll_cnt, int num_drop) {
+        this->backoff = backoff;
+        this->num_coll = num_coll;
+        this->num_tx = num_tx;
+        this->coll_cnt = coll_cnt;
+        this->num_drop = num_drop;
     }
 };
 

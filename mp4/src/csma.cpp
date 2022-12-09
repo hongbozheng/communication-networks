@@ -74,45 +74,50 @@ void read_input_file(std::ifstream &input_file) {
 void pre_sim() {
     srand(time(NULL));
     for (int i = 0; i < N; ++i) {
-        Node node(rand() % (R[0]+1), 0, 0, 0, 0);
+        Node *node = new Node(rand() % (R[0]+1), 0, 0, 0, 0);
         node_vec.push_back(node);
     }
     #ifdef DEBUG
     printf("[INFO]: -------------------- Node --------------------\n");
     for (int i = 0; i < node_vec.size(); ++i) {
         printf("[INFO]: BACKOFF %d #_TX %d #_COLL %d COLL_# %d #_DROP %d\n",
-               node_vec[i].backoff, node_vec[i].num_tx, node_vec[i].num_coll,
-               node_vec[i].coll_cnt, node_vec[i].num_drop);
+               node_vec[i]->backoff, node_vec[i]->num_tx, node_vec[i]->num_coll,
+               node_vec[i]->coll_cnt, node_vec[i]->num_drop);
 
     }
     printf("[INFO]: ----------------------------------------------\n");
     #endif
 }
 
+bool backoff_cmp(Node *n1, Node *n2) {
+    return n1->backoff < n2->backoff;
+}
+
 void run_sim() {
     int num_pkt = 0;
 
     for (int clk = 0; clk < T; ++clk) {
+        sort(node_vec.begin(), node_vec.end(), backoff_cmp);
         std::vector<Node *> ready_node_vec;
 
         if (num_pkt == 0) chnl_avil = true;
 
         if (chnl_avil) {
             for (int i = 0; i < node_vec.size(); ++i) {
-                if (node_vec[i].backoff == 0) {
-                    ready_node_vec.push_back(&node_vec[i]);
+                if (node_vec[i]->backoff == 0) {
+                    ready_node_vec.push_back(node_vec[i]);
                 }
             }
 
             if (ready_node_vec.size() == 0) {
                 for (int i = 0; i < node_vec.size(); ++i) {
-                    --node_vec[i].backoff;
+                    --node_vec[i]->backoff;
                 }
             } else if (ready_node_vec.size() == 1){
                 chnl_avil = false;
                 num_pkt = L;
                 Node *node = ready_node_vec[0];
-                node->backoff = rand() % (R[0] + 1);
+                node->backoff = rand() % (R[0]+1);
                 node->num_tx++;
                 node->coll_cnt = 0;
             } else {
@@ -142,8 +147,8 @@ void run_sim() {
         printf("[INFO]: -------------------- Node --------------------\n");
         for (int i = 0; i < node_vec.size(); ++i) {
             printf("[INFO]: BACKOFF %d #_TX %d #_COLL %d COLL_# %d #_DROP %d\n",
-                   node_vec[i].backoff, node_vec[i].num_tx, node_vec[i].num_coll,
-                   node_vec[i].coll_cnt, node_vec[i].num_drop);
+                   node_vec[i]->backoff, node_vec[i]->num_tx, node_vec[i]->num_coll,
+                   node_vec[i]->coll_cnt, node_vec[i]->num_drop);
 
         }
         printf("[INFO]: ----------------------------------------------\n");
@@ -154,17 +159,16 @@ void run_sim() {
 float get_sim_result() {
     int ttl_tx = 0, ttl_coll = 0;
 
-    for (std::vector<Node>::iterator iter = node_vec.begin(); iter != node_vec.end(); ++iter) {
-        Node *node = &(*iter);
-        ttl_coll += node->num_coll;
-        ttl_tx += node->num_tx;
+    for (int i = 0; i < node_vec.size(); i++) {
+        ttl_coll += node_vec[i]->num_coll;
+        ttl_tx += node_vec[i]->num_tx;
     }
     float link_util = float(ttl_tx) * float(L) / float(T);
     return link_util;
 }
 
 void w_link_util(FILE *output_fp, float link_util) {
-    fprintf(output_fp, "%.2f", link_util);
+    fprintf(output_fp, "%.2f\n", link_util);
 }
 
 int main(int argc, char** argv) {

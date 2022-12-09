@@ -12,10 +12,11 @@
 #ifndef CSMA_H
 #define CSMA_H
 
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<vector>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
 #include <fstream>          /* message_file */
 #include "node.h"
 
@@ -32,7 +33,7 @@ int L = -1;
 std::vector<int> R;
 int M = -1;
 int T = -1;
-std::vector<Node> node_vec;
+std::vector<Node* > node_vec;
 bool chnl_avil = true;
 
 #endif

@@ -159,11 +159,12 @@ float get_sim_result() {
         ttl_coll += node->num_coll;
         ttl_tx += node->num_tx;
     }
-    printf("ttl_col %d\n", ttl_coll);
-    printf("ttl_tx %d\n", ttl_tx);
-
     float link_util = float(ttl_tx) * float(L) / float(T);
     return link_util;
+}
+
+void w_link_util(FILE *output_fp, float link_util) {
+    fprintf(output_fp, "%.2f", link_util);
 }
 
 int main(int argc, char** argv) {
@@ -191,14 +192,17 @@ int main(int argc, char** argv) {
     run_sim();
     float link_util = get_sim_result();
     printf("[INFO]: Link Utilization %f\n", link_util);
-    printf("[INFO]: Finish Simulation\n");
+    printf("[INFO]: Finish Simulation\n\n");
 
+    printf("[INFO]: Write link utilization into output file %s\n", "output.txt");
     FILE *output_fp = fopen("output.txt", "w");
     if (output_fp == NULL) {
         printf("[ERROR]: Failed to open output file output.txt\n");
         exit(EXIT_FAILURE);
     }
+    w_link_util(output_fp, link_util);
     fclose(output_fp);
+    printf("[INFO]: Finish writing link utilization into output file %s", "output.txt");
 
     return 0;
 }

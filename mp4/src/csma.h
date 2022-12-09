@@ -32,10 +32,7 @@ int L = -1;
 std::vector<int> R;
 int M = -1;
 int T = -1;
-bool chnl_occupied = false;
-
-int ttl_coll = 0;
-int ttl_tx = 0;
-int ttl_idle = 0;
+std::vector<Node> node_vec;
+bool chnl_avil = true;
 
 #endif

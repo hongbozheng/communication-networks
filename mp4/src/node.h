@@ -15,19 +15,19 @@
 class Node {
 public:
     int backoff;            /* need to refactor the following */
-    int num_coll;
     int num_tx;
+    int num_coll;
     int coll_cnt;
     int num_drop;
 
     Node();
 
-    Node(int backoff, int num_coll, int num_tx, int coll_cnt, int num_drop) {
-        backoff = backoff;
-        num_coll = num_coll;
-        num_tx = num_tx;
-        coll_cnt = coll_cnt;
-        num_drop = num_drop;
+    Node(int bo, int num_collision, int num_tran, int collision_cnt, int number_drop) {
+        backoff = bo;
+        num_coll = num_collision;
+        num_tx = num_tran;
+        coll_cnt = collision_cnt;
+        num_drop = number_drop;
     }
 };
 
